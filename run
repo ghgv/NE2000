@@ -1,0 +1,4 @@
+gcc -O -o testne2000 testne2000.c
+./testne2000
+
+
