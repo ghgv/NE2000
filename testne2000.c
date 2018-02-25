@@ -2,6 +2,9 @@
 #include "testne2000.h"
 #include <unistd.h>
 #include <string.h>
+#include <time.h>
+#include <unistd.h>
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,131 +21,65 @@
 #error You must compile this driver with "-O"!
 #endif
 
-#define COMMAND 0xec00
-#define DATACONFIGURATION COMMAND+0x0E
 
-
-#define PAGESTART  COMMAND+01
-#define PAGESTOP  COMMAND+02
-#define BOUNDARY  COMMAND+03
-#define TRANSMITSTATUS  COMMAND+04
-#define TRANSMITPAGE  COMMAND+04
-#define TRANSMITBYTECOUNT0  COMMAND+0x05
-#define NCR  COMMAND+05
-#define TRANSMITBYTECOUNT1  COMMAND+0x06
-#define INTERRUPTSTATUS  COMMAND+0x07
-#define CURRENT  COMMAND+07
-#define REMOTESTARTADDRESS0 COMMAND+0x08
-#define CRDMA0  COMMAND+0x08
-#define REMOTESTARTADDRESS1 COMMAND+0x09
-#define CRDMA1  COMMAND+0x09
-#define REMOTEBYTECOUNT0  COMMAND+0x0A
-#define REMOTEBYTECOUNT1  COMMAND+0x0B
-#define RECEIVESTATUS  COMMAND+0x0C
-#define RECEIVECONFIGURATION  COMMAND+0x0C
-#define TRANSMITCONFIGURATION  COMMAND+0x0D
-#define FAE TALLY  COMMAND+0x0D
-#define DATACONFIGURATION  COMMAND+0x0E
-#define CRC TALLY  COMMAND+0x0E
-#define INTERRUPTMASK  COMMAND+0x0F
-#define MISS PKT TALLY  COMMAND+0x0F
-#define IOPORT COMMAND+0x10
-
-#define PSTART  0x46
-#define PSTOP 0x80
-#define TRANSMITBUFFER 0x40
-
-
-#define NE_P1_PAR0      0x01           // Physical Address Register 0
-#define NE_P1_PAR1      0x02           // Physical Address Register 1
-#define NE_P1_PAR2      0x03           // Physical Address Register 2
-#define NE_P1_PAR3      0x04           // Physical Address Register 3
-#define NE_P1_PAR4      0x05           // Physical Address Register 4
-#define NE_P1_PAR5      0x06           // Physical Address Register 5
-#define NE_P1_CURR      0x07           // Current RX ring-buffer page
-#define NE_P1_MAR0      0x08           // Multicast Address Register 0
-#define NE_P1_MAR1      0x09           // Multicast Address Register 1
-#define NE_P1_MAR2      0x0A           // Multicast Address Register 2
-#define NE_P1_MAR3      0x0B           // Multicast Address Register 3
-#define NE_P1_MAR4      0x0C           // Multicast Address Register 4
-#define NE_P1_MAR5      0x0D           // Multicast Address Register 5
-#define NE_P1_MAR6      0x0E           // Multicast Address Register 6
-#define NE_P1_MAR7      0x0F           // Multicast Address Register 7
-#define	ETHER_ADDR_LEN		6
-#define MTU 1560
-
-
-
-
-typedef unsigned short u16;
-typedef unsigned long u32;
 u16 ip_sum_calc(u16 len_ip_header, u16 *buff)
 {
-u16 word16;
-u32 sum=0;
-u16 i;
-printf("\nip header \n");
-unsigned char *l;
-l=buff;
-for (i=0;i<21;i++)
-	printf("0x%02x ",(unsigned short) *(l+i));
-printf("\n");
-    
-    for (i=0;i<len_ip_header;i=i+2){
-        word16 =((l[i]<<8)&0xFF00)+(l[i+1]&0xFF);
-	printf("%04x\n",word16);
-        sum = sum + (u32) word16;  
-    }
-    
-    while (sum>>16)
-      sum = (sum & 0xFFFF)+(sum >> 16);
-    
-    sum = ~sum;
+	u16 word16;
+	u32 sum=0;
+	u16 i;
+	unsigned char *l;
+	printf("\nip header \n");
+	l=buff;
+	for (i=0;i<21;i++)
+		printf("0x%02x ",(unsigned short) *(l+i));
+	printf("\n");
+	    
+	    for (i=0;i<len_ip_header;i=i+2){
+		word16 =((l[i]<<8)&0xFF00)+(l[i+1]&0xFF);
+		printf("%04x\n",word16);
+		sum = sum + (u32) word16;  
+	    }
+	    
+	    while (sum>>16)
+	      sum = (sum & 0xFFFF)+(sum >> 16);
+	    
+	    sum = ~sum;
 return ((u16) sum);
 }
 
 u16 tcp_sum( u16 *buff,u16 len_tcp,unsigned short *src_addr,unsigned int *dst_addr)
 {
-u16 word16,a,b,c,d;
-u32 sum=0;
-u16 i;
-printf("\nTCP header-> \n");
-unsigned char *l;
-l=buff;
-/*for (i=0;i<len_tcp;i++)
-	printf("0x%02x ",(unsigned short) *(l+i));
-printf("\n");
-printf("\nIP addr-> \n");*/
-a=htonl(&src_addr[0])>>16;
-//printf("0x%04x ", a);
-b=htonl(&src_addr[0]);
-//printf("0x%04x \n", b );
-c=htonl(&dst_addr[0])>>16;
-//printf("0x%04x ", c);
-d=htonl(&dst_addr[0]);
-//printf("0x%04x \n", d );
-printf("\n");
+	u16 word16,a,b,c,d;
+	u32 sum=0;
+	u16 i;
+	unsigned char *l;
+
+	printf("\nTCP header-> \n");
+	l=buff;
+	a=htonl(&src_addr[0])>>16;
+	b=htonl(&src_addr[0]);
+	c=htonl(&dst_addr[0])>>16;
+	d=htonl(&dst_addr[0]);
+	printf("\n");
     
-    for (i=0;i<len_tcp;i=i+2){
-        word16 =((l[i]<<8)&0xFF00)+(l[i+1]&0xFF);
-	//printf("%04x\n",word16);
-        sum = sum + (u32) word16;  
-    }
+	for (i=0;i<len_tcp;i=i+2){
+        	word16 =((l[i]<<8)&0xFF00)+(l[i+1]&0xFF);
+	        sum = sum + (u32) word16;  
+    	}
+	
 	sum = sum + (u32) a;
 	sum = sum + (u32) b;
 	sum = sum + (u32) c;  
 	sum = sum + (u32) d;
-//printf("len 0x%04x %i \n", len_tcp,len_tcp );
 	sum = sum + len_tcp; 
-	sum = sum + 0x06; 
-//printf("Sum 0x%04x  \n", sum );
-	
+	sum = sum + 0x06; // The TCP protocol
 
-    while (sum>>16)
-      sum = (sum & 0xFFFF)+(sum >> 16);
+	while (sum>>16)
+      		sum = (sum & 0xFFFF)+(sum >> 16);
     
-    sum = ~sum;
-return ((u16) sum);
+	sum = ~sum;
+
+	return ((u16) sum);
 }
 
 
@@ -200,24 +137,27 @@ struct ne {
 };
 
 static int ne_probe(struct ne *ne) {
-  unsigned char byte,i;
- 
-  // Reset
-  //msleep(5000);
-   byte=inb(COMMAND);
+	
+	unsigned char byte,i;
+	int s=0;
+  
+  	byte=inb(COMMAND);
 	outb(0x21,COMMAND);
- // sleep(1);
 	printf("Command reg %x\n",byte);
-	outb(0x58,DATACONFIGURATION);
-   outb(0x00,REMOTEBYTECOUNT0);
+	outb(0x48,DATACONFIGURATION);//58 Auto DMA
+   	outb(0x00,REMOTEBYTECOUNT0);
 	outb(0x00,REMOTEBYTECOUNT1);
-   outb(0x00,RECEIVECONFIGURATION);
+   	outb(0x00,RECEIVECONFIGURATION);//0x15
 	outb(0x20,TRANSMITPAGE); 
-   outb(0x02,TRANSMITCONFIGURATION);
-	outb(0x26,PAGESTART);
-	outb(0x26,BOUNDARY);
-   outb(0x40,PAGESTOP); 
-	outb(0x61,COMMAND);
+	outb(0x02,TRANSMITCONFIGURATION);
+	outb(PSTART,PAGESTART); //Receive Buffer Ring
+	rx_page_start=PSTART;
+	next_pkt = rx_page_start ;
+	printf("PSTART: %02x\n",PSTART); 
+	outb(PSTART,BOUNDARY);
+	printf("BOUND: %02x\n",inb(BOUNDARY)); 
+   	outb(0x40,PAGESTOP);  //Stop Receive Buffer Ring
+	outb(0x61,COMMAND);//Page 1, Stop
 
 	
 
@@ -225,20 +165,19 @@ static int ne_probe(struct ne *ne) {
 		{
 		 printf("PAR %x %x\n",inb(COMMAND + NE_P1_PAR0 + i),ne->hwaddr.addr[i]);
 		}
-   // Actually the ethernet address is overwritten later on wit 0xA5A5. You can fix it. I will put a useful payload later
-	outb(0x26,CURRENT);
-	outb(0x22,COMMAND);
-	outb(0xff,INTERRUPTSTATUS); 
-	outb(0x0B,INTERRUPTMASK);
-	outb(0x00,TRANSMITCONFIGURATION);
 
-//send a packet
+	outb(0x26,CURRENT);//CURR Pointer in 0x26
+	outb(0x22,COMMAND);//PAGE 0, Start
+	outb(0xff,INTERRUPTSTATUS); //Clear Interrripts
+	outb(0x0B,INTERRUPTMASK);//Enable Receive and Tx
+	outb(0x00,TRANSMITCONFIGURATION);//ERROR, TX and RX
+	//send a packet
 	int count =100;
 	outb(count & 0xff,REMOTEBYTECOUNT0);
 	outb(count >>8 , REMOTEBYTECOUNT1);
 	outb(0x00, REMOTESTARTADDRESS0);
 	outb(TRANSMITBUFFER, REMOTESTARTADDRESS1);	
-	outb(0x12,COMMAND);
+	outb(0x12,COMMAND);//START y Remote Write
 	ethhdr_t *ethhdr;
 	ethhdr=malloc(sizeof(ethhdr_t));
 	ethhdr->h_dest[0]=0x00;
@@ -247,12 +186,12 @@ static int ne_probe(struct ne *ne) {
 	ethhdr->h_dest[3]=0x73;
 	ethhdr->h_dest[4]=0xef;
 	ethhdr->h_dest[5]=0x9b;
-	ethhdr->h_source[0]=0x6;
-	ethhdr->h_source[1]=0x7;
-	ethhdr->h_source[2]=0x8;
-	ethhdr->h_source[3]=0x9;
-	ethhdr->h_source[4]=0xA;
-	ethhdr->h_source[5]=0xB;
+	ethhdr->h_source[0]=0x00;
+	ethhdr->h_source[1]=0x24;
+	ethhdr->h_source[2]=0x8c;
+	ethhdr->h_source[3]=0x73;
+	ethhdr->h_source[4]=0xef;
+	ethhdr->h_source[5]=0x9c;
 	ethhdr->h_proto= htons(ETH_P_IP); 
 	memcpy(&ether_packet,ethhdr,sizeof(ethhdr_t));
 
@@ -267,13 +206,13 @@ static int ne_probe(struct ne *ne) {
 	IPHeader->ip_ttl=0x14;
 	IPHeader->ip_p=0x6;
 	IPHeader->ip_sum=0x0;
-	IPHeader->ip_src=inet_addr("192.168.1.11");  //htonl(0x2);
-	IPHeader->ip_dst=inet_addr("192.168.2.105");  //htonl(0x6);
+	IPHeader->ip_src=inet_addr("192.168.2.11");  //htonl(0x2);
+	IPHeader->ip_dst=inet_addr("192.168.2.108");  //htonl(0x6);
 	memcpy(&ether_packet[14],IPHeader,sizeof(ipheader));
 	unsigned char *l;
 	l=IPHeader;
 	IPHeader->ip_sum=ip_sum_calc(20,(unsigned short *) l);
-	//Test IPHeader->ip_sum=0x21a6;
+
 	printf("\nIP Checksum = %x\n",IPHeader->ip_sum);
 
 	ether_packet[14+11]=IPHeader->ip_sum;
@@ -326,35 +265,180 @@ static int ne_probe(struct ne *ne) {
 	for (i=0;i<21;i++)
 		printf("%hx ",(unsigned short) *(l+i));
 
-	int s=0;
+
 	s=inb(INTERRUPTSTATUS);
-	while(s!=0x40)
+
+	while(s!=0x40) //Remote DMA complete?
 		s=inb(INTERRUPTSTATUS);
-	printf("\nInterrup status %x\n",s);
-	outb(0x40,INTERRUPTSTATUS);
-	s=inb(INTERRUPTSTATUS);
-	printf("Interrup status %x\n",s);
+
+	printf("\nInterrup status: %x\n",s);
+	
 	outb(TRANSMITBUFFER,TRANSMITPAGE);
 	outb(count & 0xff,TRANSMITBYTECOUNT0);
 	outb(count >>8 ,TRANSMITBYTECOUNT1);
-	outb(0x26,COMMAND);
+	outb(0x26,COMMAND);//PAge 0, remote write,Transmite, start 
 
-return 1;
+	return 1;
 }
 
 int main(char argc, char **argv)
 {
 char e;
+unsigned char s,d;
+unsigned int data[100],i=0;
 if (iopl(3)) {perror("iopl error"); exit(1);}
 	struct ne *NIC;
 	NIC = (struct ne *) malloc(sizeof(struct ne));
-
-  ne_probe(NIC);
+	nic_reset();par();
+	ne_probe(NIC);	
+	
+  	
   while(e!='s')
 	{
-	printf("Enter command:\n");
 	scanf("%c",&e);
+	irq_event(); 
 	}
  printf("Exiting..\n");
   return 0;
 }
+
+
+
+static int irq_event()
+{
+unsigned char irq_value;
+
+
+	outb(CMD_NO_DMA | CMD_START,INTERRUPTSTATUS);
+
+	while((irq_value = inb(COMMAND + P0_ISR))!=0)
+		{
+			outb(irq_value,COMMAND + P0_ISR);
+		
+			if(irq_value & ISR_VL_PRX){
+				printf("Packet Received\n");
+				received_packet();
+				}
+
+			if(irq_value & ISR_VL_PTX){		
+				//printf("Packet Transmitted\n");
+				}
+		
+			if(irq_value & ISR_VL_RDC)
+				printf("DMA complete\n");
+
+			 outb( CMD_NO_DMA | CMD_START,INTERRUPTSTATUS);	
+		}
+	return 0;
+}
+
+
+int nic_reset()
+{
+	unsigned char c; 
+
+	c = inb(COMMAND + NS_RESET);
+	outb(c,COMMAND + NS_RESET);
+	printf("Reset %02x\n",c);
+}
+
+int par(){
+	
+	int j;
+	unsigned char c;
+
+	outb( 0x40,COMMAND);//PAGE 1
+	outb( 0x00,COMMAND+NE_P1_PAR0);
+	outb( 0x24,COMMAND+NE_P1_PAR1);
+	outb( 0x8c,COMMAND+NE_P1_PAR2);
+	outb( 0x73,COMMAND+NE_P1_PAR3);
+	outb( 0xef,COMMAND+NE_P1_PAR4);
+	outb( 0x9c,COMMAND+NE_P1_PAR5);
+
+	
+	for(j=1;j<7;j++){
+		c=inb(COMMAND+j);
+		printf("PAR%i=%02x\n",j,c);
+	}
+}
+
+int received_packet(){
+	
+	dp8390_pkt_hdr header;
+	unsigned short packet_ptr;
+	
+	outb(CMD_NO_DMA | CMD_START | REG_PAGE0, COMMAND);
+	printf(" Inside received packet %02x %02x\n",next_pkt,inb(COMMAND+NE_P1_CURR));
+	while(next_pkt !=inb(COMMAND+NE_P1_CURR)){
+		printf(" Next Packet= %02x CURR=%02x\n",next_pkt,inb(COMMAND+NE_P1_CURR));
+		packet_ptr= next_pkt*256;
+		printf(" Next Packet= %02x CURR=%02x, packet_ptr=%02x\n",next_pkt,inb(COMMAND+NE_P1_CURR),packet_ptr);
+		readmem(&header,packet_ptr,sizeof(dp8390_pkt_hdr));
+		printf("header.next_packet: %02x\n",header.NextPacketPointer);
+		printf("header.ReceiveStatus: %02x\n",header.ReceiveStatus);
+		printf("header.packet_length: %x\n",header.length);
+		}
+}
+
+int readmem(void *dest,unsigned short src ,int n){
+	
+ 	int i;
+	char *tmp = (char*)dest;
+	unsigned char pl0,pl1;
+	unsigned short pal;
+	unsigned char next_pack;
+	
+	n=4;
+	
+	usleep(20000);	
+	printf("Inside Readmem, n=%i\n",n);
+	outb(inb(BOUNDARY),REMOTESTARTADDRESS1);
+	outb(0X00,REMOTESTARTADDRESS0);
+	outb(0X04, REMOTEBYTECOUNT0);	
+	outb(0X00, REMOTEBYTECOUNT1);
+	outb( 0x0A, COMMAND);
+	/*outb(REG_PAGE2, COMMAND);
+	printf("PSTART %02x\n",inb(COMMAND+1));
+	printf("PSTOP %02x\n",inb(COMMAND+2));*/
+	
+	printf("BOUNDARY? %02x\n",inb(BOUNDARY));
+	
+	/*outb(0x0,REMOTESTARTADDRESS0);
+	usleep(2000);
+	outb(0x26,REMOTESTARTADDRESS1);
+	usleep(2000);	*/	
+	
+	printf("RBC0 %02x\n",n & 0xff);
+	printf("RBC1 %02x\n",n >> 8);
+	printf("RSTA0 %02x\n",src&0xff);
+	printf("RSTA1 %02x\n",src>>8);
+	printf("Head 0x%02x \n", inb(IOPORT));
+	next_pack=inb(IOPORT);
+	printf("Next_packet: 0x%02x \n", next_pack);
+	pl0=inb(IOPORT);
+	printf("Len0 0x%02x \n",pl0 );
+	pl1=inb(IOPORT);
+	printf("Len1 0x%02x \n", pl1);
+	pal=((pl1<<8)& 0xff00)+pl0-sizeof(dp8390_pkt_hdr);
+	printf("Pal %i\n",pal);	
+
+	outb(inb(BOUNDARY),REMOTESTARTADDRESS1);
+	outb(0X04,REMOTESTARTADDRESS0);
+	outb(pal&0xff, REMOTEBYTECOUNT0);	
+	outb((pal>>8)&0xff, REMOTEBYTECOUNT1);
+	outb( 0x0A, COMMAND);
+	for(i=0;i<pal;i++)
+		printf("0x%02hhx ",inb(IOPORT));
+		
+	while(!(inb(INTERRUPTSTATUS)) & 0x40);
+	
+	outb(0x40,INTERRUPTSTATUS);//Clear the interrupt
+	outb(REG_PAGE2, COMMAND);
+	printf("Current pointer: %02x \n",inb(CURRENT));
+	
+	outb(REG_PAGE0, COMMAND);
+	
+	return n;
+
+}
+

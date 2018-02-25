@@ -1,4 +1,4 @@
-gcc -O -o testne2000 testne2000.c
+arp -s 192.168.2.11 00:24:8c:73:ef:9c
+gcc -O -o testne2000 testne2000.c -Wincompatible-pointer-types
 ./testne2000
-
 

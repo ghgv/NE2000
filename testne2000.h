@@ -111,6 +111,124 @@
 #define ACK			0x10
 #define URG			0x20	
 
+//DP8390 Registers
+#define         REG_PAGE0               0x00
+#define         REG_PAGE1               0x40
+#define         REG_PAGE2               0x80
+#define         REG_PAGE3               0xC0
+
+#define         P0_RCR                  0x0c
+#define         P0_TCR                  0x0d
+#define         P0_ISR                  0x07
+#define         P0_RBCR0                0x0a    /* Remote Byte Count Lo */
+#define         P0_RBCR1                0x0b    /* Remote Byte Count Hi */
+#define         P0_TBCR0                0x05
+#define         P0_TBCR1                0x06
+
+#define         CMD_REMOTE_READ         0x08
+#define         CMD_REMOTE_WRITE        0x10
+#define         CMD_SEND_PACKET         0x20
+#define         CMD_TXP_BIT             0x04
+#define         CMD_NO_DMA              0x20
+#define         CMD_STOP                0x01
+#define         CMD_START               0x02
+
+#define         P0_RCR                  0x0c
+#define         P0_TCR                  0x0d
+#define         P0_ISR                  0x07
+#define         P0_RBCR0                0x0a    /* Remote Byte Count Lo */
+#define         P0_RBCR1                0x0b    /* Remote Byte Count Hi */
+#define         P0_TBCR0                0x05
+#define         P0_TBCR1                0x06
+
+#define         P1_CURR                 0x07
+
+#define         ISR_VL_PRX              0x01    /* Packet Received */
+#define         ISR_VL_PTX              0x02    /* Packet Transmitted */
+#define         ISR_VL_RXE              0x04    /* Receive Error */
+#define         ISR_VL_TXE              0x08    /* Transmission Error */
+#define         ISR_VL_OVW              0x10    /* Overwrite */
+#define         ISR_VL_CNT              0x20    /* Counter Overflow */
+#define         ISR_VL_RDC              0x40    /* Remote Data Complete */
+#define         ISR_VL_RST              0x80    /* Reset status */
+
+#define         NS_DATA_PORT            0x10
+#define         NS_RESET                0x1f
+
+#define         NE_PAGE_SIZE            256
+
+
+#define BASE 0xEC00
+#define COMMAND BASE+0
+#define DATACONFIGURATION COMMAND+0x0E
+
+
+#define PAGESTART  COMMAND+01
+#define PAGESTOP  COMMAND+02
+#define BOUNDARY  COMMAND+03
+#define TRANSMITSTATUS  COMMAND+04
+#define TRANSMITPAGE  COMMAND+04
+#define TRANSMITBYTECOUNT0  COMMAND+0x05
+#define NCR  COMMAND+05
+#define TRANSMITBYTECOUNT1  COMMAND+0x06
+#define INTERRUPTSTATUS  COMMAND+0x07
+#define CURRENT  COMMAND+07
+#define REMOTESTARTADDRESS0 COMMAND+0x08
+#define CRDMA0  COMMAND+0x08
+#define REMOTESTARTADDRESS1 COMMAND+0x09
+#define CRDMA1  COMMAND+0x09
+#define REMOTEBYTECOUNT0  COMMAND+0x0A
+#define REMOTEBYTECOUNT1  COMMAND+0x0B
+#define RECEIVESTATUS  COMMAND+0x0C
+#define RECEIVECONFIGURATION  COMMAND+0x0C
+#define TRANSMITCONFIGURATION  COMMAND+0x0D
+#define FAE TALLY  COMMAND+0x0D
+#define DATACONFIGURATION  COMMAND+0x0E
+#define CRC TALLY  COMMAND+0x0E
+#define INTERRUPTMASK  COMMAND+0x0F
+#define MISS PKT TALLY  COMMAND+0x0F
+#define IOPORT COMMAND+0x10
+
+#define PSTART  0x46
+#define PSTOP 0x80
+#define TRANSMITBUFFER 0x40
+
+#define NE_P1_PAR0      0x01           // Physical Address Register 0
+#define NE_P1_PAR1      0x02           // Physical Address Register 1
+#define NE_P1_PAR2      0x03           // Physical Address Register 2
+#define NE_P1_PAR3      0x04           // Physical Address Register 3
+#define NE_P1_PAR4      0x05           // Physical Address Register 4
+#define NE_P1_PAR5      0x06           // Physical Address Register 5
+#define NE_P1_CURR      0x07           // Current RX ring-buffer page
+#define NE_P1_MAR0      0x08           // Multicast Address Register 0
+#define NE_P1_MAR1      0x09           // Multicast Address Register 1
+#define NE_P1_MAR2      0x0A           // Multicast Address Register 2
+#define NE_P1_MAR3      0x0B           // Multicast Address Register 3
+#define NE_P1_MAR4      0x0C           // Multicast Address Register 4
+#define NE_P1_MAR5      0x0D           // Multicast Address Register 5
+#define NE_P1_MAR6      0x0E           // Multicast Address Register 6
+#define NE_P1_MAR7      0x0F           // Multicast Address Register 7
+#define	ETHER_ADDR_LEN		6
+#define MTU 1560
+
+typedef unsigned short u16;
+typedef unsigned long u32;
+
+static unsigned char next_pkt =0;
+
+static unsigned int  rx_page_start = 64;
+
+
+typedef struct t_dp8390_pkt_hdr
+{
+ unsigned char NextPacketPointer;
+ unsigned char ReceiveStatus;
+ unsigned short length;
+
+} __attribute__ ((packed)) dp8390_pkt_hdr;
+
+//END OF DP8390
+
 
 typedef struct header
 {
@@ -163,6 +281,12 @@ typedef struct {
   unsigned short int urgent_p;
 } __attribute__((packed)) tcp_header_t;
 
+static int irq_event();
+int nic_reset();
+int par();
+
+int received_packet();
+int readmem(void *dest,unsigned short src ,int n);
 
 #define htons(A) ((((uint16)(A) & 0xff00) >> 8) | \
 (((uint16)(A) & 0x00ff) << 8))
