@@ -34,17 +34,18 @@ u16 ip_sum_calc(u16 len_ip_header, u16 *buff)
 		printf("0x%02x ",(unsigned short) *(l+i));
 	printf("\n");
 	    
-	    for (i=0;i<len_ip_header;i=i+2){
+	for (i=0;i<len_ip_header;i=i+2){
 		word16 =((l[i]<<8)&0xFF00)+(l[i+1]&0xFF);
 		printf("%04x\n",word16);
 		sum = sum + (u32) word16;  
-	    }
+	}
 	    
-	    while (sum>>16)
-	      sum = (sum & 0xFFFF)+(sum >> 16);
+	while (sum>>16)
+		sum = (sum & 0xFFFF)+(sum >> 16);
 	    
-	    sum = ~sum;
-return ((u16) sum);
+	sum = ~sum;
+	
+	return ((u16) sum);
 }
 
 u16 tcp_sum( u16 *buff,u16 len_tcp,unsigned short *src_addr,unsigned int *dst_addr)
@@ -84,24 +85,25 @@ u16 tcp_sum( u16 *buff,u16 len_tcp,unsigned short *src_addr,unsigned int *dst_ad
 
 
 unsigned short checksum (int count, unsigned short *addr) {
-    unsigned long sum = 0;
 
-    count=count>>8;
-    printf("Count =%x \n",count);
-    while (count > 1) {
-        printf("%x ",(*addr<<8 &0xff00  ));
-			sum += *addr++;      
-        count -= 2;
-    }
+	unsigned long sum = 0;
+	
+	count=count>>8;
+	printf("Count =%x \n",count);
+	while (count > 1) {
+        	printf("%x ",(*addr<<8 &0xff00  ));
+		sum += *addr++;      
+        	count -= 2;
+    	}
 
-    // Add left-over byte, if any
-    if (count > 0)
-        sum += * (unsigned char *) addr;
+    	// Add left-over byte, if any
+    	if (count > 0)
+        	sum += * (unsigned char *) addr;
 
-    while (sum >> 16)
-        sum = (sum & 0xffff) + (sum >> 16);
-
-    return (unsigned short)htons(~sum);
+	while (sum >> 16)
+		sum = (sum & 0xffff) + (sum >> 16);
+	
+	return (unsigned short)htons(~sum);
 }
 
 
@@ -147,24 +149,25 @@ static int ne_probe(struct ne *ne) {
 	outb(0x48,DATACONFIGURATION);//58 Auto DMA
    	outb(0x00,REMOTEBYTECOUNT0);
 	outb(0x00,REMOTEBYTECOUNT1);
-   	outb(0x00,RECEIVECONFIGURATION);//0x15
+   	outb(0x15,RECEIVECONFIGURATION);//0x15
 	outb(0x20,TRANSMITPAGE); 
 	outb(0x02,TRANSMITCONFIGURATION);
 	outb(PSTART,PAGESTART); //Receive Buffer Ring
+	outb(PSTOP,PAGESTOP); //Receive Buffer Ring
 	rx_page_start=PSTART;
 	next_pkt = rx_page_start ;
 	printf("PSTART: %02x\n",PSTART); 
 	outb(PSTART,BOUNDARY);
-	printf("BOUND: %02x\n",inb(BOUNDARY)); 
-   	outb(0x40,PAGESTOP);  //Stop Receive Buffer Ring
+	printf("BOUNDARY SET AT: %02x\n",inb(BOUNDARY)); 
+   	outb(PSTOP,PAGESTOP);  //Stop Receive Buffer Ring
 	outb(0x61,COMMAND);//Page 1, Stop
 
 	
 
-	for (i = 0; i < ETHER_ADDR_LEN; i++)
+	/*for (i = 0; i < ETHER_ADDR_LEN; i++)
 		{
 		 printf("PAR %x %x\n",inb(COMMAND + NE_P1_PAR0 + i),ne->hwaddr.addr[i]);
-		}
+		}*/
 
 	outb(0x26,CURRENT);//CURR Pointer in 0x26
 	outb(0x22,COMMAND);//PAGE 0, Start
@@ -283,31 +286,35 @@ static int ne_probe(struct ne *ne) {
 
 int main(char argc, char **argv)
 {
-char e;
-unsigned char s,d;
-unsigned int data[100],i=0;
-if (iopl(3)) {perror("iopl error"); exit(1);}
+	char e;
+	unsigned char s,d;
+	unsigned int data[100],i=0;
+
+	if (iopl(3)) {perror("iopl error"); exit(1);}
+
 	struct ne *NIC;
+
 	NIC = (struct ne *) malloc(sizeof(struct ne));
 	nic_reset();par();
 	ne_probe(NIC);	
 	
   	
-  while(e!='s')
-	{
-	scanf("%c",&e);
-	irq_event(); 
+	while(e!='s'){
+		scanf("%c",&e);
+		irq_event(); 
 	}
- printf("Exiting..\n");
-  return 0;
+	
+	printf("Exiting..\n");
+	
+	return 0;
 }
 
 
 
 static int irq_event()
 {
-unsigned char irq_value;
-
+	
+	unsigned char irq_value;
 
 	outb(CMD_NO_DMA | CMD_START,INTERRUPTSTATUS);
 
@@ -318,10 +325,11 @@ unsigned char irq_value;
 			if(irq_value & ISR_VL_PRX){
 				printf("Packet Received\n");
 				received_packet();
+				
 				}
 
 			if(irq_value & ISR_VL_PTX){		
-				//printf("Packet Transmitted\n");
+				printf("Packet Transmitted\n");
 				}
 		
 			if(irq_value & ISR_VL_RDC)
@@ -354,12 +362,6 @@ int par(){
 	outb( 0x73,COMMAND+NE_P1_PAR3);
 	outb( 0xef,COMMAND+NE_P1_PAR4);
 	outb( 0x9c,COMMAND+NE_P1_PAR5);
-
-	
-	for(j=1;j<7;j++){
-		c=inb(COMMAND+j);
-		printf("PAR%i=%02x\n",j,c);
-	}
 }
 
 int received_packet(){
@@ -368,7 +370,9 @@ int received_packet(){
 	unsigned short packet_ptr;
 	
 	outb(CMD_NO_DMA | CMD_START | REG_PAGE0, COMMAND);
-	printf(" Inside received packet %02x %02x\n",next_pkt,inb(COMMAND+NE_P1_CURR));
+	printf(" Inside received packet %02x ",next_pkt);
+	outb(REG_PAGE1, COMMAND);
+	printf(" CURR=%02x\n",inb(COMMAND+NE_P1_CURR));		
 	while(next_pkt !=inb(COMMAND+NE_P1_CURR)){
 		printf(" Next Packet= %02x CURR=%02x\n",next_pkt,inb(COMMAND+NE_P1_CURR));
 		packet_ptr= next_pkt*256;
@@ -378,41 +382,47 @@ int received_packet(){
 		printf("header.ReceiveStatus: %02x\n",header.ReceiveStatus);
 		printf("header.packet_length: %x\n",header.length);
 		}
+			
+	while(1);
+	return 0;
 }
 
 int readmem(void *dest,unsigned short src ,int n){
 	
  	int i;
-	char *tmp = (char*)dest;
+	char *tmp = (char*)dest,m;
 	unsigned char pl0,pl1;
 	unsigned short pal;
 	unsigned char next_pack;
 	
 	n=4;
 	
-	usleep(20000);	
+
 	printf("Inside Readmem, n=%i\n",n);
+	outb(REG_PAGE0, COMMAND);
+	printf("BOUNDARY= %02x\n",inb(BOUNDARY));
 	outb(inb(BOUNDARY),REMOTESTARTADDRESS1);
 	outb(0X00,REMOTESTARTADDRESS0);
-	outb(0X04, REMOTEBYTECOUNT0);	
+	outb(0X04, REMOTEBYTECOUNT0); //Read 4 bytes	
 	outb(0X00, REMOTEBYTECOUNT1);
-	outb( 0x0A, COMMAND);
+	outb(0x0A, COMMAND);
 	/*outb(REG_PAGE2, COMMAND);
 	printf("PSTART %02x\n",inb(COMMAND+1));
-	printf("PSTOP %02x\n",inb(COMMAND+2));*/
+	printf("PSTOP %02x\n",inb(COMMAND+2));
+
 	
-	printf("BOUNDARY? %02x\n",inb(BOUNDARY));
+	
 	
 	/*outb(0x0,REMOTESTARTADDRESS0);
 	usleep(2000);
 	outb(0x26,REMOTESTARTADDRESS1);
 	usleep(2000);	*/	
 	
-	printf("RBC0 %02x\n",n & 0xff);
+	/*printf("RBC0 %02x\n",n & 0xff);
 	printf("RBC1 %02x\n",n >> 8);
 	printf("RSTA0 %02x\n",src&0xff);
-	printf("RSTA1 %02x\n",src>>8);
-	printf("Head 0x%02x \n", inb(IOPORT));
+	printf("RSTA1 %02x\n",src>>8);*/
+	printf("Head 0x %02x \n", inb(IOPORT));
 	next_pack=inb(IOPORT);
 	printf("Next_packet: 0x%02x \n", next_pack);
 	pl0=inb(IOPORT);
@@ -421,14 +431,18 @@ int readmem(void *dest,unsigned short src ,int n){
 	printf("Len1 0x%02x \n", pl1);
 	pal=((pl1<<8)& 0xff00)+pl0-sizeof(dp8390_pkt_hdr);
 	printf("Pal %i\n",pal);	
+	while(1);
 
 	outb(inb(BOUNDARY),REMOTESTARTADDRESS1);
 	outb(0X04,REMOTESTARTADDRESS0);
 	outb(pal&0xff, REMOTEBYTECOUNT0);	
 	outb((pal>>8)&0xff, REMOTEBYTECOUNT1);
 	outb( 0x0A, COMMAND);
-	for(i=0;i<pal;i++)
-		printf("0x%02hhx ",inb(IOPORT));
+	for(i=0;i<pal;i++){
+		m=inb(IOPORT);
+		printf("0x%02hhx ",m);
+	}
+
 		
 	while(!(inb(INTERRUPTSTATUS)) & 0x40);
 	

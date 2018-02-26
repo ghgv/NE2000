@@ -209,7 +209,7 @@
 #define NE_P1_MAR6      0x0E           // Multicast Address Register 6
 #define NE_P1_MAR7      0x0F           // Multicast Address Register 7
 #define	ETHER_ADDR_LEN		6
-#define MTU 1560
+#define MTU 1560 
 
 typedef unsigned short u16;
 typedef unsigned long u32;
@@ -295,6 +295,7 @@ int readmem(void *dest,unsigned short src ,int n);
 (((uint32)(A) & 0x00ff0000) >> 8) | \
 (((uint32)(A) & 0x0000ff00) << 8) | \
 (((uint32)(A) & 0x000000ff) << 24))
+
 
 #endif
 
