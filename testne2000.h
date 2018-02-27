@@ -211,10 +211,12 @@
 #define	ETHER_ADDR_LEN		6
 #define MTU 1560 
 
+
 typedef unsigned short u16;
 typedef unsigned long u32;
 
 static unsigned char next_pkt =0;
+int k=0;
 
 static unsigned int  rx_page_start = 64;
 
@@ -285,8 +287,9 @@ static int irq_event();
 int nic_reset();
 int par();
 
+
 int received_packet();
-int readmem(void *dest,unsigned short src ,int n);
+int readmem(dp8390_pkt_hdr *dest,unsigned short src ,int n);
 
 #define htons(A) ((((uint16)(A) & 0xff00) >> 8) | \
 (((uint16)(A) & 0x00ff) << 8))

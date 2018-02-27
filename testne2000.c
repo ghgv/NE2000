@@ -149,18 +149,18 @@ static int ne_probe(struct ne *ne) {
 	outb(0x48,DATACONFIGURATION);//58 Auto DMA
    	outb(0x00,REMOTEBYTECOUNT0);
 	outb(0x00,REMOTEBYTECOUNT1);
-   	outb(0x15,RECEIVECONFIGURATION);//0x15
+   	outb(0x00,RECEIVECONFIGURATION);//0x15
 	outb(0x20,TRANSMITPAGE); 
 	outb(0x02,TRANSMITCONFIGURATION);
 	outb(PSTART,PAGESTART); //Receive Buffer Ring
 	outb(PSTOP,PAGESTOP); //Receive Buffer Ring
 	rx_page_start=PSTART;
-	next_pkt = rx_page_start ;
+	next_pkt = rx_page_start+1 ;
 	printf("PSTART: %02x\n",PSTART); 
 	outb(PSTART,BOUNDARY);
 	printf("BOUNDARY SET AT: %02x\n",inb(BOUNDARY)); 
    	outb(PSTOP,PAGESTOP);  //Stop Receive Buffer Ring
-	outb(0x61,COMMAND);//Page 1, Stop
+	outb(REG_PAGE1+CMD_STOP,COMMAND);//Page 1, Stop
 
 	
 
@@ -169,8 +169,8 @@ static int ne_probe(struct ne *ne) {
 		 printf("PAR %x %x\n",inb(COMMAND + NE_P1_PAR0 + i),ne->hwaddr.addr[i]);
 		}*/
 
-	outb(0x26,CURRENT);//CURR Pointer in 0x26
-	outb(0x22,COMMAND);//PAGE 0, Start
+	outb(PSTART+1,CURRENT);//CURR Pointer in 0x26
+	outb(REG_PAGE0+CMD_START,COMMAND);//PAGE 0, Start
 	outb(0xff,INTERRUPTSTATUS); //Clear Interrripts
 	outb(0x0B,INTERRUPTMASK);//Enable Receive and Tx
 	outb(0x00,TRANSMITCONFIGURATION);//ERROR, TX and RX
@@ -210,7 +210,7 @@ static int ne_probe(struct ne *ne) {
 	IPHeader->ip_p=0x6;
 	IPHeader->ip_sum=0x0;
 	IPHeader->ip_src=inet_addr("192.168.2.11");  //htonl(0x2);
-	IPHeader->ip_dst=inet_addr("192.168.2.108");  //htonl(0x6);
+	IPHeader->ip_dst=inet_addr("192.168.2.105");  //htonl(0x6);
 	memcpy(&ether_packet[14],IPHeader,sizeof(ipheader));
 	unsigned char *l;
 	l=IPHeader;
@@ -297,10 +297,12 @@ int main(char argc, char **argv)
 	NIC = (struct ne *) malloc(sizeof(struct ne));
 	nic_reset();par();
 	ne_probe(NIC);	
+
+
 	
   	
 	while(e!='s'){
-		scanf("%c",&e);
+		//scanf("%c",&e);
 		irq_event(); 
 	}
 	
@@ -320,16 +322,23 @@ static int irq_event()
 
 	while((irq_value = inb(COMMAND + P0_ISR))!=0)
 		{
+			
+			printf("IRQ=	%02x %02x\n",irq_value,irq_value & ISR_VL_PTX);
 			outb(irq_value,COMMAND + P0_ISR);
 		
+			if(irq_value & ISR_VL_OVW){
+				printf("Overflow\n");
+				
+				}
 			if(irq_value & ISR_VL_PRX){
-				printf("Packet Received\n");
+				printf("######### Packet %i Received #########\n",k);
 				received_packet();
 				
 				}
 
 			if(irq_value & ISR_VL_PTX){		
-				printf("Packet Transmitted\n");
+				printf(" Packet Transmitted ##########\n");
+				
 				}
 		
 			if(irq_value & ISR_VL_RDC)
@@ -370,24 +379,27 @@ int received_packet(){
 	unsigned short packet_ptr;
 	
 	outb(CMD_NO_DMA | CMD_START | REG_PAGE0, COMMAND);
-	printf(" Inside received packet %02x ",next_pkt);
+	printf("Inside Received Packet Function. Next Packet:	%02x ",next_pkt);
 	outb(REG_PAGE1, COMMAND);
-	printf(" CURR=%02x\n",inb(COMMAND+NE_P1_CURR));		
+	printf("Current Page=%02x\n",inb(COMMAND+NE_P1_CURR));		
 	while(next_pkt !=inb(COMMAND+NE_P1_CURR)){
-		printf(" Next Packet= %02x CURR=%02x\n",next_pkt,inb(COMMAND+NE_P1_CURR));
+		printf("Next Packet= %02x CURR=%02x\n",next_pkt,inb(COMMAND+NE_P1_CURR));
 		packet_ptr= next_pkt*256;
-		printf(" Next Packet= %02x CURR=%02x, packet_ptr=%02x\n",next_pkt,inb(COMMAND+NE_P1_CURR),packet_ptr);
+		printf("Next Packet= %02x CURR=%02x, Packet Ptr=%02x\n",next_pkt,inb(COMMAND+NE_P1_CURR),packet_ptr);
 		readmem(&header,packet_ptr,sizeof(dp8390_pkt_hdr));
-		printf("header.next_packet: %02x\n",header.NextPacketPointer);
-		printf("header.ReceiveStatus: %02x\n",header.ReceiveStatus);
-		printf("header.packet_length: %x\n",header.length);
+		printf("Next Packet Pointer:	0x%02x\n",header.NextPacketPointer);
+		printf("Receive Status:		0x%02x\n",header.ReceiveStatus);
+		printf("Packet Length:		%i bytes\n\n",header.length);
+
+		outb(REG_PAGE1, COMMAND);
+		printf("Current Page=%02x\n",inb(COMMAND+NE_P1_CURR));
 		}
 			
-	while(1);
+	outb(REG_PAGE0, COMMAND);
 	return 0;
 }
 
-int readmem(void *dest,unsigned short src ,int n){
+int readmem(dp8390_pkt_hdr *dest,unsigned short src ,int n){
 	
  	int i;
 	char *tmp = (char*)dest,m;
@@ -398,9 +410,9 @@ int readmem(void *dest,unsigned short src ,int n){
 	n=4;
 	
 
-	printf("Inside Readmem, n=%i\n",n);
+	printf("\nInside Readmem:\n\n");
 	outb(REG_PAGE0, COMMAND);
-	printf("BOUNDARY= %02x\n",inb(BOUNDARY));
+	printf("BOUNDARY:		0x%02x\n",inb(BOUNDARY));
 	outb(inb(BOUNDARY),REMOTESTARTADDRESS1);
 	outb(0X00,REMOTESTARTADDRESS0);
 	outb(0X04, REMOTEBYTECOUNT0); //Read 4 bytes	
@@ -422,16 +434,19 @@ int readmem(void *dest,unsigned short src ,int n){
 	printf("RBC1 %02x\n",n >> 8);
 	printf("RSTA0 %02x\n",src&0xff);
 	printf("RSTA1 %02x\n",src>>8);*/
-	printf("Head 0x %02x \n", inb(IOPORT));
-	next_pack=inb(IOPORT);
-	printf("Next_packet: 0x%02x \n", next_pack);
+	printf("Receive Status:		0x%02x \n", dest->ReceiveStatus=inb(IOPORT));
+	next_pkt=inb(IOPORT);
+	dest->NextPacketPointer=next_pkt;
+	printf("Next Packet Pointer:	0x%02x \n", next_pkt);
 	pl0=inb(IOPORT);
-	printf("Len0 0x%02x \n",pl0 );
+	dest->NextPacketPointer=next_pkt;
+	printf("Receive Byte Count 0:	0x%02x \n",pl0 );
 	pl1=inb(IOPORT);
-	printf("Len1 0x%02x \n", pl1);
+	printf("Receive Byte Count 1:	0x%02x \n", pl1);
 	pal=((pl1<<8)& 0xff00)+pl0-sizeof(dp8390_pkt_hdr);
-	printf("Pal %i\n",pal);	
-	while(1);
+	dest->length=pal;
+	printf("Packet Length:		%i bytes\n\n",pal);	
+	
 
 	outb(inb(BOUNDARY),REMOTESTARTADDRESS1);
 	outb(0X04,REMOTESTARTADDRESS0);
@@ -442,15 +457,27 @@ int readmem(void *dest,unsigned short src ,int n){
 		m=inb(IOPORT);
 		printf("0x%02hhx ",m);
 	}
-
+	
 		
 	while(!(inb(INTERRUPTSTATUS)) & 0x40);
 	
+	outb(next_pkt,BOUNDARY);
+
+	if((next_pkt-1) < PSTART)
+		outb(PSTOP-1,BOUNDARY);
+		
 	outb(0x40,INTERRUPTSTATUS);//Clear the interrupt
+	outb(0x02,INTERRUPTSTATUS);//Clear the interrupt
 	outb(REG_PAGE2, COMMAND);
-	printf("Current pointer: %02x \n",inb(CURRENT));
+	printf("\n\nCurrent Pointer:	%02x \n\n",inb(CURRENT));
 	
 	outb(REG_PAGE0, COMMAND);
+	printf("\n\nCurrent ISR status:	%02x \n\n",inb(INTERRUPTSTATUS));
+	if(k>5){
+		while(1){printf(".");};
+		}
+	else
+	 k++;
 	
 	return n;
 
