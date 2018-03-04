@@ -9,9 +9,13 @@ int send_raw_packet(unsigned char *packet,int len,int proto)
 
   printf("\n########### Inside Send Raw Packet ########### \n");
 
-
+  count = len+sizeof(ethhdr_t);
   outb(REG_PAGE0, COMMAND);
+
+  #ifdef DEBUG
   printf("\nWaiting for Tx to finish [-]\n");
+
+
   while(inb(COMMAND)==0x26)
   {
     if(i % 100 == 0)
@@ -22,11 +26,21 @@ int send_raw_packet(unsigned char *packet,int len,int proto)
        i++;
     }
 
+  #endif
+
+
   printf("COUNT: %i  ISR: %x\n",count,inb(INTERRUPTSTATUS));
-  outb(0xff,INTERRUPTSTATUS);
+  outb(0xff,INTERRUPTSTATUS); // Clear all interrupts
   printf("TRANSMITBUFFER: %02x  ISR: %x\n",TRANSMITBUFFER,inb(INTERRUPTSTATUS));
-  outb(count & 0xff,REMOTEBYTECOUNT0);
-  outb(count >>8 , REMOTEBYTECOUNT1);
+  if(count<64){
+    outb(64 & 0xFF,REMOTEBYTECOUNT0);
+    outb((64 >>8)&0xFF , REMOTEBYTECOUNT1);
+    }
+  else
+    {
+    outb(count & 0xFF,REMOTEBYTECOUNT0);
+    outb((count >>8)&0xFF , REMOTEBYTECOUNT1);
+    }
   outb(0x00, REMOTESTARTADDRESS0);
   outb(TRANSMITBUFFER, REMOTESTARTADDRESS1);
   outb(0x12,COMMAND);//START y Remote Write
@@ -53,12 +67,13 @@ int send_raw_packet(unsigned char *packet,int len,int proto)
 
 
 
-  for (i=0;i<(14+len);i++){
+  for (i=0;i<(count);i++){
     outw(ether_packet[i],IOPORT);
     conteo++;
   }
- while(conteo<100){
+ while(conteo<64){
   outw(0x0000,IOPORT);
+  printf("######################%i \n",conteo);
   conteo++;
  }
 
@@ -83,11 +98,19 @@ int send_raw_packet(unsigned char *packet,int len,int proto)
       }
 
 
-  	printf("\nInterrup status: 0x%x\n",s);
+  	printf("\nInterrup status: 0x%x, count %i %x %x\n",s, count,count & 0xff,count >>8);
 
   	outb(TRANSMITBUFFER,TRANSMITPAGE);
-  	outb(count & 0xff,TRANSMITBYTECOUNT0);
-  	outb(count >>8 ,TRANSMITBYTECOUNT1);
+    if(count<64){
+      outb(64 & 0xff,TRANSMITBYTECOUNT0);
+    	outb(64 >>8 ,TRANSMITBYTECOUNT1); 
+    }
+    else
+    {
+      outb(count & 0xff,TRANSMITBYTECOUNT0);
+      outb(count >>8 ,TRANSMITBYTECOUNT1);
+
+    }
   	outb(0x26,COMMAND);//PAge 0, remote write,Transmite, start
 
     printf("\n########### End Send Raw Packet ########### \n");

@@ -13,8 +13,19 @@ typedef struct icmp_t
 
 }__attribute__ ((packed)) icmp_hdr;
 
+
+typedef struct
+{
+ unsigned char type;
+ unsigned char code;
+ unsigned short checksum;
+ unsigned short identifier;
+ unsigned short Sequence_number;
+}__attribute__ ((packed)) icmp_reply_t;
+
 int decode_icmp(unsigned char *packet);
 int icmp_reply(unsigned char *packet);
+int icmp_checksum();
 
 
 #endif

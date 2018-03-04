@@ -30,15 +30,18 @@ u16 ip_sum_calc(u16 len_ip_header, u16 *buff)
 	u32 sum=0;
 	u16 i;
 	unsigned char *l;
-	printf("\nip header \n");
+
 	l=buff;
+
+	printf("\nip header \n");
+	#ifdef DEBUG
 	for (i=0;i<21;i++)
 		printf("0x%02x ",(unsigned short) *(l+i));
 	printf("\n");
+	#endif
 
 	for (i=0;i<len_ip_header;i=i+2){
 		word16 =((l[i]<<8)&0xFF00)+(l[i+1]&0xFF);
-		printf("%04x\n",word16);
 		sum = sum + (u32) word16;
 	}
 
@@ -146,12 +149,12 @@ static int ne_probe(struct ne *ne) {
 	int s=0;
 
   byte=inb(COMMAND);
-	outb(0x21,COMMAND);
-	printf("Command reg %x\n",byte);
+	outb(CMD_STOP + CMD_NO_DMA,COMMAND);//Stop amd Abort
+	printf("Command Register:		%x\n",byte);
 	outb(0x48,DATACONFIGURATION);//58 Auto DMA
   outb(0x00,REMOTEBYTECOUNT0);
 	outb(0x00,REMOTEBYTECOUNT1);
-  outb(0x15,RECEIVECONFIGURATION);//0x15 o 0x00
+  outb(0x17,RECEIVECONFIGURATION);//0x15 o 0x00
 	outb(0x20,TRANSMITPAGE);
 	outb(0x02,TRANSMITCONFIGURATION);
 	outb(PSTART,PAGESTART); //Receive Buffer Ring
@@ -387,18 +390,28 @@ int received_packet(){
 	outb(CMD_NO_DMA | CMD_START | REG_PAGE0, COMMAND);
 	printf("Inside Received Packet Function. Next Packet:	%02x ",next_pkt);
 	outb(REG_PAGE1, COMMAND);
+
+	#ifdef DEBUG
 	printf("Current Page=%02x\n",inb(COMMAND+NE_P1_CURR));
+	#endif
+
 	while(next_pkt !=inb(COMMAND+NE_P1_CURR)){
+
 		printf("Next Packet= %02x CURR=%02x\n",next_pkt,inb(COMMAND+NE_P1_CURR));
 		packet_ptr= next_pkt*256;
 		printf("Next Packet= %02x CURR=%02x, Packet Ptr=%02x\n",next_pkt,inb(COMMAND+NE_P1_CURR),packet_ptr);
 		readmem(&header,packet_ptr,sizeof(dp8390_pkt_hdr));
+
+		#ifdef DEBUG
 		printf("Next Packet Pointer:	0x%02x\n",header.NextPacketPointer);
 		printf("Receive Status:		0x%02x\n",header.ReceiveStatus);
 		printf("Packet Length:		%i bytes\n\n",header.length);
+		#endif
 
 		outb(REG_PAGE1, COMMAND);
+		#ifdef DEBUG
 		printf("Current Page=%02x\n",inb(COMMAND+NE_P1_CURR));
+		#endif
 		}
 
 	outb(REG_PAGE0, COMMAND);
@@ -415,27 +428,40 @@ int readmem(dp8390_pkt_hdr *dest,unsigned short src ,int n){
 
 	n=4;
 
-
+#ifdef DEBUG
 	printf("\nInside Readmem:\n\n");
+#endif
 	outb(REG_PAGE0, COMMAND);
+#ifdef DEBUG
 	printf("BOUNDARY:		0x%02x\n",inb(BOUNDARY));
+#endif
 	outb(inb(BOUNDARY),REMOTESTARTADDRESS1);
 	outb(0X00,REMOTESTARTADDRESS0);
 	outb(0X04, REMOTEBYTECOUNT0); //Read 4 bytes
 	outb(0X00, REMOTEBYTECOUNT1);
 	outb(0x0A, COMMAND);
 	printf("Receive Status:		0x%02x \n", dest->ReceiveStatus=inb(IOPORT));
+
 	next_pkt=inb(IOPORT);unsigned char pac;
-int len;
+	int len;
 	dest->NextPacketPointer=next_pkt;
+	#ifdef DEBUG
 	printf("Next Packet Pointer:	0x%02x \n", next_pkt);
+	#endif
 	pl0=inb(IOPORT);
 	dest->NextPacketPointer=next_pkt;
+	#ifdef DEBUG
 	printf("Receive Byte Count 0:	0x%02x \n",pl0 );
+	#endif
 	pl1=inb(IOPORT);
+
+	#ifdef DEBUG
 	printf("Receive Byte Count 1:	0x%02x \n", pl1);
+	#endif
+
 	pal=((pl1<<8)& 0xff00)+pl0-sizeof(dp8390_pkt_hdr);
 	dest->length=pal;
+
 	printf("Packet Length:		%i bytes\n\n",pal);
 
 
@@ -446,7 +472,9 @@ int len;
 	outb( 0x0A, COMMAND);
 	for(i=0;i<pal;i++){
 		ether_packet[i]=inb(IOPORT);
+		#ifdef DEBUG
 		printf("0x%02hhx ",ether_packet[i]);
+		#endif
 	}
 
 
@@ -460,7 +488,10 @@ int len;
 	outb(0x40,INTERRUPTSTATUS);//Clear the interrupt
 	outb(0x02,INTERRUPTSTATUS);//Clear the interrupt
 	outb(REG_PAGE2, COMMAND);
+
+	#ifdef DEBUG
 	printf("\n\nCurrent Pointer:	%02x \n\n",inb(CURRENT));
+	#endif
 
 	outb(REG_PAGE0, COMMAND);
 	printf("\n\nCurrent ISR status:	%02x \n\n",inb(INTERRUPTSTATUS));
@@ -476,19 +507,21 @@ int packet_selector()
 	arp_frame *arpa;
 	unsigned short EthernetP;
 
-	printf("SOA:		%i\n"	,sizeof(arp_frame));
+
 	arpa=malloc(sizeof(arp_frame));
 	memcpy(&EthernetP,&ether_packet[12],sizeof(unsigned short));
 	memcpy(arpa,&ether_packet[14],sizeof(arp_frame));
 
-	if(ntohs(EthernetP)==ETH_P_IP){
-		printf("\n	IPv4 Packet.\n");
-		decode_ip(&ether_packet);
-		}
-	if(ntohs(EthernetP)==ETH_P_ARP){
-		printf("ARP Packet.\n");
-		//decode_arp(&ether_packet);
-		}
+switch (ntohs(EthernetP)) {
+	case ETH_P_IP:
+					printf("\n	IPv4 Packet.\n");
+					decode_ip(&ether_packet);
+					break;
+	case ETH_P_ARP:
+					printf("ARP Packet.\n");
+					decode_arp(&ether_packet);
+					break;
+}
 
 
 	free(arpa);

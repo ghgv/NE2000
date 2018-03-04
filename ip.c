@@ -1,5 +1,6 @@
 #include "ip.h"
 #include "icmp.h"
+#include "tcp.h"
 #include "testne2000.h"
 #include <stdio.h>
 #include <string.h>
@@ -17,11 +18,22 @@ int decode_ip(unsigned char *packet)
   printf("header.ip_p   %02x\n",header.ip_p);
 
   if(htonl(header.ip_dst)==0xc0a8020b)
-  if(header.ip_p==IPPROTO_ICMP){
-    printf("ICMP Packet.\n");
-    decode_icmp(packet);
-  
+  {
+    switch (header.ip_p) {
+      case IPPROTO_ICMP:
+            printf("ICMP Packet.\n");
+            decode_icmp(packet);
+            break;
+      case IPPROTO_TCP:
+            printf("TCP Packet.\n");
+            decode_tcp(packet);
+            break;
+
+
     }
+
+
+  }
 
   return 0;
 }
