@@ -1,3 +1,4 @@
+#include "nic.h"
 #include "tcp.h"
 #include <stdio.h>
 
