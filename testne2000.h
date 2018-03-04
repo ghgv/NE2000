@@ -21,12 +21,12 @@
  *		as published by the Free Software Foundation; either version
  *		2 of the License, or (at your option) any later version.
  */
- 
+
 
 
 /*
  *	IEEE 802.3 Ethernet magic constants.  The frame sizes omit the preamble
- *	and FCS/CRC (frame check sequence). 
+ *	and FCS/CRC (frame check sequence).
  */
 
 #define ETH_ALEN	6		/* Octets in one ethernet addr	 */
@@ -82,7 +82,7 @@
 /*
  *	Non DIX types. Won't clash for 1500 types.
  */
- 
+
 #define ETH_P_802_3		0x0001		/* Dummy type for 802.3 frames  */
 #define ETH_P_AX25		0x0002		/* Dummy protocol id for AX.25  */
 #define ETH_P_ALL			0x0003		/* Every packet (be careful!!!) */
@@ -104,12 +104,14 @@
 #define IPPROTO_IP              0               /* dummy for IP */
 #define IPPROTO_UDP             17              /* user datagram protocol */
 #define IPPROTO_TCP             6               /* tcp */
-#define FIN 			0x01
+#define IPPROTO_ICMP            1               /*ICMP*/
+
+/*TCP flags*/
 #define SYN 			0x02
 #define RST 			0x04
 #define PSH			0x08
 #define ACK			0x10
-#define URG			0x20	
+#define URG			0x20
 
 //DP8390 Registers
 #define         REG_PAGE0               0x00
@@ -209,14 +211,14 @@
 #define NE_P1_MAR6      0x0E           // Multicast Address Register 6
 #define NE_P1_MAR7      0x0F           // Multicast Address Register 7
 #define	ETHER_ADDR_LEN		6
-#define MTU 1560 
+#define MTU 1560
 
 
 typedef unsigned short u16;
 typedef unsigned long u32;
 
 static unsigned char next_pkt =0;
-int k=0;
+static int k=0;
 
 static unsigned int  rx_page_start = 64;
 
@@ -290,6 +292,7 @@ int par();
 
 int received_packet();
 int readmem(dp8390_pkt_hdr *dest,unsigned short src ,int n);
+int packet_selector();
 
 #define htons(A) ((((uint16)(A) & 0xff00) >> 8) | \
 (((uint16)(A) & 0x00ff) << 8))
@@ -299,6 +302,7 @@ int readmem(dp8390_pkt_hdr *dest,unsigned short src ,int n);
 (((uint32)(A) & 0x0000ff00) << 8) | \
 (((uint32)(A) & 0x000000ff) << 24))
 
+#define ntohs(A) ((((uint16)(A) & 0xff00) >> 8) | \
+(((uint16)(A) & 0x00ff) << 8))
 
 #endif
-
