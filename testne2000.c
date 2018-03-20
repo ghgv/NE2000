@@ -2,6 +2,8 @@
 #include "testne2000.h"
 #include "arp.h"
 #include "ip.h"
+#include "sys/socket.h"
+#include "sys/mbuf.h"
 #include <unistd.h>
 #include <string.h>
 #include <time.h>
@@ -209,7 +211,7 @@ static int ne_probe(struct ne *ne) {
 	IPHeader->ip_p=0x6;
 	IPHeader->ip_sum=0x0;
 	IPHeader->ip_src=inet_addr("192.168.2.11");  //htonl(0x2);
-	IPHeader->ip_dst=inet_addr("192.168.2.111");  //htonl(0x6);
+	IPHeader->ip_dst=inet_addr("192.168.2.110");  //htonl(0x6);
 	memcpy(&ether_packet[14],IPHeader,sizeof(ipheader));
 	unsigned char *l;
 	l=IPHeader;
@@ -224,7 +226,7 @@ static int ne_probe(struct ne *ne) {
 	TCPHeader=malloc(sizeof(tcp_header_t));
 
 	TCPHeader->src_port=htons(4100);
-	TCPHeader->dst_port=htons(0x100);
+	TCPHeader->dst_port=htons(256);
 	TCPHeader->seq=htonl(0x2233);
 	TCPHeader->ack=htons(0x00);
 	TCPHeader->darefla=htons(0x5000+SYN);
@@ -286,6 +288,7 @@ static int ne_probe(struct ne *ne) {
 int main(char argc, char **argv)
 {
 	char e;
+	int sock;
 	unsigned char s,d;
 	unsigned int data[100],i=0;
 
@@ -293,28 +296,43 @@ int main(char argc, char **argv)
 
 	struct ne *NIC;
 
+	sockaddr_in_t dest;
+	dest.sin_family = AF_INET;
+	dest.sin_port = htons(4100);//dest_port
+	dest.sin_addr.s_addr=inet_addr("192.168.2.110");
+
 	NIC = (struct ne *) malloc(sizeof(struct ne));
 	nic_reset();
 	par();
 	ne_probe(NIC);
 
-/*	for(i=0;i<200;i++)
-		ether_packet[i]=0xa3;
+  init_buf();
+	sock=socket(AF_INET,SOCK_DGRAM,IPPROTO_TCP);
+	printf("Socket Number %i\n",sock);
 
-	send_raw_packet(&ether_packet,200);
-*/
-
-
+  printf("Result of connect: 	%i\n",connect_s(sock,&dest,sizeof(dest)));
+  //printf("Result from read: 	%i bytes\n",read_s(sock,data,100));
+	//
+	fflush(stdout);
 
 
 
 	while(e!='s'){
 		//scanf("%c",&e);
+		int g;
 		irq_event();
+		g=read_s(sock,data,100);
+		//printf("G = %i\n",g);
+		if(g>0)
+		for(i=0;i<g;i++)
+		{
+		 printf("0x%02x ",*(data+i));
 
+		fflush(stdout);
 	}
 
-
+	}
+close_s(sock);
 	printf("Exiting..\n");
 
 	return 0;
@@ -372,6 +390,8 @@ int par(){
 
 	int j;
 	unsigned char c;
+
+ /*Assign the MAC address*/
 
 	outb( 0x40,COMMAND);//PAGE 1
 	outb( 0x00,COMMAND+NE_P1_PAR0);
@@ -515,7 +535,8 @@ int packet_selector()
 switch (ntohs(EthernetP)) {
 	case ETH_P_IP:
 					printf("\n	IPv4 Packet.\n");
-					decode_ip(&ether_packet);
+					mbuf(&ether_packet);
+					//decode_ip(&ether_packet);
 					break;
 	case ETH_P_ARP:
 					printf("ARP Packet.\n");

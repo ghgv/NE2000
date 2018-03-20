@@ -1,3 +1,4 @@
+#include "sys/mbuf.h"
 #include <stdio.h>
 #include "nic.h"
 #include "testne2000.h"
@@ -7,16 +8,14 @@ const char *progress = "-\\|/";
 int send_raw_packet(unsigned char *packet,int len,int proto)
 {
   int count =100,i,s,conteo;
-
-  printf("\n########### Inside Send Raw Packet ########### \n");
-
+  #ifdef DEBUG
+  //printf("\n########### Inside Send Raw Packet ########### \n");
+  #endif
   count = len+sizeof(ethhdr_t);
   outb(REG_PAGE0, COMMAND);
 
   #ifdef DEBUG
   printf("\nWaiting for Tx to finish [-]\n");
-
-
   while(inb(COMMAND)==0x26)
   {
     if(i % 100 == 0)
@@ -26,7 +25,6 @@ int send_raw_packet(unsigned char *packet,int len,int proto)
        }
        i++;
     }
-
   #endif
 
 
@@ -74,7 +72,7 @@ int send_raw_packet(unsigned char *packet,int len,int proto)
   }
  while(conteo<64){
   outw(0x0000,IOPORT);
-  printf("######################%i \n",conteo);
+//  printf("######################%i \n",conteo);
   conteo++;
  }
 
@@ -114,7 +112,7 @@ int send_raw_packet(unsigned char *packet,int len,int proto)
     }
   	outb(0x26,COMMAND);//PAge 0, remote write,Transmite, start
 
-    printf("\n########### End Send Raw Packet ########### \n");
+  //  printf("\n########### End Send Raw Packet ########### \n");
 
     return 0;
 }

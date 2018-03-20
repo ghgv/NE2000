@@ -2,6 +2,17 @@
 #define TCP_H
 
 #include "nic.h"
+
+
+#define SYN 		0x02
+#define RST 		0x04
+#define PSH			0x08
+#define ACK			0x10
+#define URG			0x20
+
+
+#define SYN_SENT 0x01
+
 /*typedef struct
 {
     unsigned long s_addr;  // load with inet_aton()
@@ -10,7 +21,7 @@
 typedef int tcpseq;
 
 //http://www.cs.unc.edu/~dewan/242/s00/xinu-pentium/h/tcb.h
-struct tcb {
+typedef struct tcb {
 	short	tcb_state;	/* TCP state				*/
 	short	tcb_ostate;	/* output state				*/
 	short	tcb_type;	/* TCP type (SERVER, CLIENT)		*/
@@ -69,7 +80,21 @@ struct tcb {
 	int	tcb_rsegq;	/* segment fragment queue		*/
 	tcpseq	tcb_finseq;	/* FIN sequence number, or 0		*/
 	tcpseq	tcb_pushseq;	/* PUSH sequence number, or 0		*/
-};
+}tcb_t;
+
+typedef struct tcpheader
+{
+    unsigned short source_port;
+    unsigned short dest_port;
+    unsigned int seq_number;
+    unsigned int ack_number;
+    unsigned short flags;
+    unsigned short windows;
+    unsigned short checksum;
+    unsigned short urgent;
+} __attribute__((packed)) tcpheader_t;
+
+
 
 int decode_tcp(unsigned char *packet);
 

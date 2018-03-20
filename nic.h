@@ -12,7 +12,9 @@
 #error You must compile this driver with "-O"!
 #endif
 
-typedef struct
+
+
+typedef struct in_addr
 {
     unsigned long s_addr;  // load with inet_aton()
 } in_addr;
@@ -47,7 +49,7 @@ int len;
 
 int send_raw_packet(unsigned char *packet,int len,int proto);
 int inet_aton(const char *cp, in_addr *ap);
-
+int get_raw_packet(unsigned char *packet,int len,int proto);
 
 
 
