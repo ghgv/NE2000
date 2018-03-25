@@ -41,11 +41,13 @@ struct netif {
 };
 
 
-typedef struct raw_packet_t
+typedef struct raw_packet
 {
-unsigned char pac;
+unsigned char *data;
 int len;
-};
+void *next;
+void *prev;
+}raw_packet_t;
 
 int send_raw_packet(unsigned char *packet,int len,int proto);
 int inet_aton(const char *cp, in_addr *ap);

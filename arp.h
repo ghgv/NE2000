@@ -5,7 +5,7 @@
 #define ARP_HTYPE 1
 #define ARP_PTYPE_IPV4 0x0800
 
-
+#include "nic.h"
 
 typedef struct arp_t
 {
@@ -23,7 +23,7 @@ unsigned char Target_P_A[4];
 } __attribute__((packed)) arp_frame;
 
 
-int decode_arp(void *packet);
+int decode_arp( raw_packet_t *packet);
 int reply_arp();
 
 

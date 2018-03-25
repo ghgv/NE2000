@@ -29,6 +29,8 @@
  *	and FCS/CRC (frame check sequence).
  */
 
+#include "nic.h"
+
 #define ETH_ALEN	6		/* Octets in one ethernet addr	 */
 #define ETH_HLEN	14		/* Total octets in header.	 */
 #define ETH_ZLEN	60		/* Min. octets in frame sans FCS */
@@ -291,7 +293,7 @@ int par();
 
 
 int received_packet();
-int readmem(dp8390_pkt_hdr *dest,unsigned short src ,int n);
+void readmem(dp8390_pkt_hdr *dest,unsigned short src ,int n);
 int packet_selector();
 
 #define htons(A) ((((uint16)(A) & 0xff00) >> 8) | \

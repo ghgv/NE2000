@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 mbuf_t *buffer,*head,*curr;
+int y;
 
 int init_buf(){
 
@@ -11,30 +12,29 @@ int init_buf(){
    curr->m_nextpacket=0;
    curr->m_next=0;
    head=curr;
-   printf("HEAD %x\n",head);
+   printf("Init mbuffer:  HEAD= %x\n",head);
 
   return 0;
 }
 
-int mbuf(unsigned char *data){
+int mbuf(raw_packet_t *pack){
 
   mbuf_t  *buffer;
   int length,i;
   unsigned char *s;
 
-  length =*(data+17);
-  for (i=0;i<20;i++)
-  printf("0x%02x ",*(data+i));
+  length =pack->len;
 
   buffer=(mbuf_t *)malloc(128);
-  printf("\n### mbuf length### %i %x \n",length,buffer);
+  printf("\n### mbuf prev: 0x%X next: 0x%X \n",pack->prev,pack->next);
   fflush(stdout);
 
-  buffer->m_data=(28);
+  buffer->m_data=28;// The size of the header of the mbuf
   if(length<100){
     buffer->m_nextpacket=0;
+    buffer->m_len=pack->len;
     buffer->m_type=(int) 34;s=(unsigned char *) buffer;
-    memcpy(s+48,data,length);
+    memcpy(s+48,pack->data,length);
 
   }
   else
@@ -43,18 +43,22 @@ int mbuf(unsigned char *data){
 
   buffer->m_nextpacket=0;
   buffer->m_next=0;
-
   curr->m_next=buffer;
   curr=buffer;
 
+  //free(pack->data);
+  //free(pack);
 
   return 0;
 }
 
 int get_buff(int f, unsigned char *addr , int count){
 
-  mbuf_t  *buffer;
+  mbuf_t  *buffer,*prev;
   tcb_t *tcb;
+  int len,i;
+  unsigned char *offset;
+
 
   tcb=fd[f].sck;
 
@@ -63,13 +67,33 @@ int get_buff(int f, unsigned char *addr , int count){
 
   for(buffer=head->m_next;buffer!=0;buffer=buffer->m_next)
     {
+
       if((buffer->data[0x24]*0x100+buffer->data[0x25])==ntohs(tcb->tcb_rport))
           {
-            //printf("#### get buff ####");
-            memcpy(addr,&buffer->data[0x24],1);//fix
-            return  1;
+            printf(" Dest. TCP port: %x\n",buffer->data[0x24]*0x100+buffer->data[0x25]);
+            printf(" Buffer: 0x%X \n",buffer);
+            printf(" Buffer->m_next = 0x%X\n",buffer->m_next);
+            printf(" Buffer->m_len = %i \n",buffer->m_len);
+            fflush(stdout);
+            prev=head;
+            prev->m_next=buffer->m_next;
+
+
+            offset=&buffer->data[14];
+
+
+            if(buffer->m_len<=count)
+            memcpy(addr,offset,buffer->m_len-14);//fix
+            //for(i=0;i<buffer->m_len;i++)
+              //printf("-0x%02X ",*(addr+i));
+            len=buffer->m_len-14;
+            free(buffer);
+
+            return  len;
 
           }
+          printf(".");
     }
 
+return 0;
 }

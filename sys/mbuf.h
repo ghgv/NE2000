@@ -31,4 +31,16 @@ typedef struct mbuf2{
 
 }__attribute__((packed))  mbuf2_t;
 
+typedef struct circularq{
+
+  int front;
+  int rear;
+  int MAX;
+  void *datapointer;
+
+} circularq_t;
+
+
+
+
 #endif

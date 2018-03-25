@@ -60,7 +60,7 @@ int connect_s(int sockfd,  sockaddr_in_t *addr, int addrlen)
     tcb->tcb_flags= htons(SYN | 5<<12) ;
     tcb->tcb_lip.s_addr=inet_addr("192.168.2.11");
     tcb->tcb_lport=htons(4100);
-    printf("connect lport %i\n",ntohs(tcb->tcb_lport));
+    printf("connect_s lport: %i\n",ntohs(tcb->tcb_lport));
 
 
     return 0;
@@ -72,15 +72,20 @@ int connect_s(int sockfd,  sockaddr_in_t *addr, int addrlen)
 int read_s(int sockfd,  unsigned char *addr, int count)
 {
   tcb_t *tcb;
+  int count1;
 
 
 
   tcb=fd[sockfd].sck;
   if(tcb!=0)
   {
-    if(get_buff(sockfd,addr,count)==-1)
+    count1=get_buff(sockfd,addr,count);
+    if(count1==-1)
+    {
       return -1;
-    return 0;
+    }
+    //printf("In read_s :%i\n",count1);
+    return count1;
   }
 
   return -1;
