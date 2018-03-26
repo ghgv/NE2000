@@ -11,6 +11,7 @@
 #define URG			0x20
 
 
+
 #define SYN_SENT 0x01
 
 /*typedef struct
@@ -80,6 +81,14 @@ typedef struct tcb {
 	int	tcb_rsegq;	/* segment fragment queue		*/
 	tcpseq	tcb_finseq;	/* FIN sequence number, or 0		*/
 	tcpseq	tcb_pushseq;	/* PUSH sequence number, or 0		*/
+
+	unsigned short fin;
+	unsigned short syn;
+	unsigned short rst;
+	unsigned short psh;
+	unsigned short ack;
+	unsigned short urg;
+
 }tcb_t;
 
 typedef struct tcpheader

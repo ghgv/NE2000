@@ -39,7 +39,7 @@ u16 ip_sum_calc(u16 len_ip_header, u16 *buff)
 
 	l=buff;
 
-	printf("\nip header \n");
+
 	#ifdef DEBUG
 	for (i=0;i<21;i++)
 		printf("0x%02x ",(unsigned short) *(l+i));
@@ -229,8 +229,8 @@ static int ne_probe(struct ne *ne) {
 	tcp_header_t *TCPHeader;
 	TCPHeader=malloc(sizeof(tcp_header_t));
 
-	TCPHeader->src_port=htons(4100);
-	TCPHeader->dst_port=htons(256);
+	TCPHeader->src_port=htons(4100);//It is 0x1004
+	TCPHeader->dst_port=htons(256);//it is 0x100
 	TCPHeader->seq=htonl(0x2233);
 	TCPHeader->ack=htons(0x00);
 	TCPHeader->darefla=htons(0x5000+SYN);
@@ -287,6 +287,7 @@ int main(char argc, char **argv)
 {
 	char e;
 	int sock;
+	char sel[30];
 	unsigned char s,d;
 	unsigned char data[100],i=0;
 
@@ -304,8 +305,8 @@ int main(char argc, char **argv)
 
 	sockaddr_in_t dest;
 	dest.sin_family = AF_INET;
-	dest.sin_port = htons(4100);//dest_port
-	dest.sin_addr.s_addr=inet_addr("192.168.2.110");
+	dest.sin_port = htons(23);//htons(4100);//dest_port
+	dest.sin_addr.s_addr=inet_addr("192.168.2.109");
 
 	NIC = (struct ne *) malloc(sizeof(struct ne));
 	nic_reset();
@@ -330,28 +331,40 @@ int main(char argc, char **argv)
 		g=read_s(sock,data,100);
 		//printf("G = %i\n",g);
 		if(g>0){
-			printf("\n## g= %i\n",g);
+			printf("\nIncoming bytes %i\n",g);
 			for(i=0;i<g;i++)
 			{
-		 	printf("0x%02x ",*(data+i));
-
+		 	printf("%i.:0x%02x ",i,*(data+i));
 			}
-			printf("\n",g);
-
+			printf("\n");
 		}
 
-		        if(i % 100 == 0)
+		   /*     if(i % 100 == 0)
 		        {
 		            printf("%c%c%c]",8,8,progresso[(i/100) % 4]);
 		            fflush(stdout);
 		        }
-		i++;
+		i++;*/
+//////////////////
+
+  printf(">");
+	e=scanf("%s",&sel);
+	char * pch;
+	char *argv[4];
 
 
-
+	pch = strtok (sel," ,.-");
+	  while (pch != NULL)
+	  {
+	    printf ("%s\n",pch);
+			//argv[j++]=pch;
+	    pch = strtok (NULL, " ,.-");
+	  }
+ 	g=write_s(sock,&sel,strlen(sel));
+	////////////////////////
 	}
 close_s(sock);
-	printf("Exiting..\n");
+printf("Exiting..\n");
 
 	return 0;
 }

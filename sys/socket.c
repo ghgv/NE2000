@@ -49,8 +49,6 @@ int connect_s(int sockfd,  sockaddr_in_t *addr, int addrlen)
 
   tcb=fd[sockfd].sck;
 
-
-
   if(tcb!=0)
   {
     tcb->tcb_type=0;//addr->sin_family;
@@ -59,34 +57,44 @@ int connect_s(int sockfd,  sockaddr_in_t *addr, int addrlen)
     tcb->tcb_state=SYN_SENT;
     tcb->tcb_flags= htons(SYN | 5<<12) ;
     tcb->tcb_lip.s_addr=inet_addr("192.168.2.11");
-    tcb->tcb_lport=htons(4100);
+    tcb->tcb_lport=htons(100);
+    tcb->tcb_swindow=htonl(0x123);
+    tcb->tcb_snext=12;
     printf("connect_s lport: %i\n",ntohs(tcb->tcb_lport));
-
-
     return 0;
   }
-
   return -1; //Error
 }
+
 
 int read_s(int sockfd,  unsigned char *addr, int count)
 {
   tcb_t *tcb;
   int count1;
 
-
-
   tcb=fd[sockfd].sck;
   if(tcb!=0)
   {
     count1=get_buff(sockfd,addr,count);
     if(count1==-1)
-    {
       return -1;
-    }
-    //printf("In read_s :%i\n",count1);
     return count1;
   }
+  return -1;
+}
 
+int write_s(int sockfd,  unsigned char *addr, int count)
+{
+  tcb_t *tcb;
+  int count1;
+
+  tcb=fd[sockfd].sck;
+  if(tcb!=0)
+  {
+    count1=send_buff(sockfd,addr,count);
+    if(count1==-1)
+      return -1;
+    return count1;
+  }
   return -1;
 }

@@ -9,8 +9,11 @@ int send_raw_packet(unsigned char *packet,int len,int proto)
 {
   int count =100,i,s,conteo;
   #ifdef DEBUG
-  //printf("\n########### Inside Send Raw Packet ########### \n");
+  printf("\n########### Inside Send Raw Packet ########### \n");
   #endif
+  printf("\n########### Inside Send Raw Packet ########### \n");
+  printf(" Packet length %i\n",len);
+
   count = len+sizeof(ethhdr_t);
   outb(REG_PAGE0, COMMAND);
 
@@ -28,7 +31,7 @@ int send_raw_packet(unsigned char *packet,int len,int proto)
   #endif
 
 
-  printf("COUNT: %i  ISR: %x\n",count,inb(INTERRUPTSTATUS));
+  printf("Count: %i  ISR: %x\n",count,inb(INTERRUPTSTATUS));
   outb(0xff,INTERRUPTSTATUS); // Clear all interrupts
   printf("TRANSMITBUFFER: %02x  ISR: %x\n",TRANSMITBUFFER,inb(INTERRUPTSTATUS));
   if(count<64){
@@ -74,15 +77,17 @@ int send_raw_packet(unsigned char *packet,int len,int proto)
   outw(0x0000,IOPORT);
 //  printf("######################%i \n",conteo);
   conteo++;
+
+
  }
 
 
 
 
   for (i=0;i<(14+len);i++)
-    printf("0x%02x ",*(ether_packet+i));
+    printf("%02X ",*(ether_packet+i));
 
- printf("\nWaiting for Interrup [-]");
+ printf("\nWaiting for Interrupt [-]");
     s=inb(INTERRUPTSTATUS);
     i=0;
   	while(s!=0x40) //Remote DMA complete?
@@ -97,7 +102,7 @@ int send_raw_packet(unsigned char *packet,int len,int proto)
       }
 
 
-  	printf("\nInterrup status: 0x%x, count %i %x %x\n",s, count,count & 0xff,count >>8);
+//  	printf("\nInterrup status: 0x%x, count %i %x %x\n",s, count,count & 0xff,count >>8);
 
   	outb(TRANSMITBUFFER,TRANSMITPAGE);
     if(count<64){
