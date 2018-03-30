@@ -1,4 +1,5 @@
 #include "nic.h"
+#include "ip.h"
 #include "sys/mbuf.h"
 #include "tcp.h"
 #include "testne2000.h"
@@ -39,7 +40,7 @@ int decode_tcp(unsigned char *packet){
 							printf("ACK\n");
 	}
 
-	
+
 
 while(1);
 

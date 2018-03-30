@@ -1,5 +1,6 @@
 #include "icmp.h"
 #include "nic.h"
+#include "ip.h"
 #include "testne2000.h"
 #include <stdio.h>
 #include <string.h>

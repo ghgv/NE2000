@@ -11,11 +11,13 @@ int send_raw_packet(unsigned char *packet,int len,int proto)
   #ifdef DEBUG
   printf("\n########### Inside Send Raw Packet ########### \n");
   #endif
-  printf("\n########### Inside Send Raw Packet ########### \n");
-  printf(" Packet length %i\n",len);
+//  printf("\n########### Inside Send Raw Packet ########### \n");
+//  printf(" Packet length %i %i\n",len,sizeof(ethhdr_t));
 
   count = len+sizeof(ethhdr_t);
   outb(REG_PAGE0, COMMAND);
+
+  outb(0x00,TRANSMITCONFIGURATION);//ERROR, TX and RX
 
   #ifdef DEBUG
   printf("\nWaiting for Tx to finish [-]\n");
@@ -34,9 +36,9 @@ int send_raw_packet(unsigned char *packet,int len,int proto)
   printf("Count: %i  ISR: %x\n",count,inb(INTERRUPTSTATUS));
   outb(0xff,INTERRUPTSTATUS); // Clear all interrupts
   printf("TRANSMITBUFFER: %02x  ISR: %x\n",TRANSMITBUFFER,inb(INTERRUPTSTATUS));
-  if(count<64){
-    outb(64 & 0xFF,REMOTEBYTECOUNT0);
-    outb((64 >>8)&0xFF , REMOTEBYTECOUNT1);
+  if(count<60){
+    outb(count & 0xFF,REMOTEBYTECOUNT0);
+    outb((count >>8)&0xFF , REMOTEBYTECOUNT1);
     }
   else
     {
@@ -73,41 +75,32 @@ int send_raw_packet(unsigned char *packet,int len,int proto)
     outw(ether_packet[i],IOPORT);
     conteo++;
   }
+  int h=0;
  while(conteo<64){
   outw(0x0000,IOPORT);
-//  printf("######################%i \n",conteo);
   conteo++;
-
-
- }
-
-
-
-
-  for (i=0;i<(14+len);i++)
-    printf("%02X ",*(ether_packet+i));
-
- printf("\nWaiting for Interrupt [-]");
+  }
+  //for (i=0;i<(14+len);i++)
+  //  printf("%i.0x%02X ",i,*(ether_packet+i));
+    printf("\nWaiting_for Interrupt [-]");
     s=inb(INTERRUPTSTATUS);
     i=0;
-  	while(s!=0x40) //Remote DMA complete?
+  	while((s&0x40)!=0x40) //Remote DMA complete?
       {
       s=inb(INTERRUPTSTATUS);
       if(i % 100 == 0)
          {
              printf("%c%c%c]",8,8,progress[(i/100) % 4]);
+             printf("%x ",s);
              fflush(stdout);
          }
          i++;
       }
-
-
 //  	printf("\nInterrup status: 0x%x, count %i %x %x\n",s, count,count & 0xff,count >>8);
-
   	outb(TRANSMITBUFFER,TRANSMITPAGE);
-    if(count<64){
-      outb(64 & 0xff,TRANSMITBYTECOUNT0);
-    	outb(64 >>8 ,TRANSMITBYTECOUNT1);
+    if(count<60){
+      outb(60 & 0xff,TRANSMITBYTECOUNT0);
+    	outb(60 >>8 ,TRANSMITBYTECOUNT1);
     }
     else
     {
@@ -175,4 +168,193 @@ int inet_aton(const char *cp,  in_addr *ap)
     }
 
     return 1;
+}
+
+int par(){
+
+	int j;
+	unsigned char c;
+
+ /*Assign the MAC address*/
+
+	outb( 0x40,COMMAND);//PAGE 1
+	outb( 0x00,COMMAND+NE_P1_PAR0);
+	outb( 0x24,COMMAND+NE_P1_PAR1);
+	outb( 0x8c,COMMAND+NE_P1_PAR2);
+	outb( 0x73,COMMAND+NE_P1_PAR3);
+	outb( 0xef,COMMAND+NE_P1_PAR4);
+	outb( 0x9c,COMMAND+NE_P1_PAR5);
+}
+
+int nic_reset()
+{
+	unsigned char c;
+
+  outb(REG_PAGE0,COMMAND);
+	c = inb(COMMAND + NS_RESET);
+	outb(c,COMMAND + NS_RESET);
+  printf("Reset %02x\n",c);
+}
+
+void overflow()
+{
+
+  {
+  			/*overflow */
+  			printf("OVER");
+        outb(CMD_STOP,COMMAND);
+  			outb(0x0,REMOTEBYTECOUNT0);
+        outb(0x0,REMOTEBYTECOUNT0);
+        outb(2,TRANSMITCONFIGURATION);
+        while(1);
+}
+}
+
+void readmem(dp8390_pkt_hdr *dest,unsigned short src ,int n){
+
+ 	int i;
+	char *tmp = (char*)dest,m;
+	unsigned char pl0,pl1,*pos;
+	unsigned short pal;
+	unsigned char next_pack;
+	raw_packet_t *newpack;
+  unsigned char pac;
+	int len;
+
+
+
+	n=4;
+
+	outb(REG_PAGE0, COMMAND); //to read the BOUNDARY
+	outb(inb(NE_P0_BOUNDARY),REMOTESTARTADDRESS1);
+	outb(0X00,REMOTESTARTADDRESS0);
+	outb(0X04, REMOTEBYTECOUNT0); //Read 4 bytes
+	outb(0X00, REMOTEBYTECOUNT1);
+	outb(CMD_REMOTE_READ+CMD_START, COMMAND);
+	dest->ReceiveStatus=inb(IOPORT);
+	next_pkt=inb(IOPORT);
+	dest->NextPacketPointer=next_pkt;
+	pl0=inb(IOPORT);
+	pl1=inb(IOPORT);
+	pal=((pl1<<8)& 0xff00)+pl0-sizeof(dp8390_pkt_hdr);
+	dest->length=pal;
+
+
+	outb(inb(NE_P0_BOUNDARY),REMOTESTARTADDRESS1);
+	outb(0X04,REMOTESTARTADDRESS0);//Four bytes ahead
+	outb(pal&0xff, REMOTEBYTECOUNT0);
+	outb((pal>>8)&0xff, REMOTEBYTECOUNT1);
+	outb( CMD_REMOTE_READ+CMD_START, COMMAND);
+
+  printf("LEN: 0x%02hhx %i\n ",pal,pal);
+	for(i=0;i<pal;i++){
+		ether_packet[i]=inb(IOPORT);
+		printf("0x%02hhx ",ether_packet[i]);
+			}
+
+	newpack=(raw_packet_t	*)malloc(sizeof(raw_packet_t));
+
+	newpack->len=pal;
+	newpack->next=NULL;
+	newpack->prev=pack;
+	newpack->data=(unsigned char *)malloc(pal);
+
+	pos=newpack->data;
+
+	memcpy(pos,&ether_packet[0],pal);
+	pack->next=newpack;
+
+	paquetes++;
+
+	while(!(inb(INTERRUPTSTATUS)) & 0x40);
+
+  outb(0x40,INTERRUPTSTATUS);//Clear the interrupt
+
+  outb(next_pkt,BOUNDARY);
+
+	if((next_pkt-1) < PSTART)
+		outb(PSTOP-1,BOUNDARY);
+
+  outb(REG_PAGE1, COMMAND); //to read the CURR
+  printf("\nNext PP 0x%02X ,  CURR= %02x \n",next_pkt,inb(COMMAND+NE_P1_CURR));
+
+  outb(REG_PAGE0, COMMAND); //to read the CURR
+	outb(0x02,INTERRUPTSTATUS);//Clear the interrupt
+	outb(0x01,INTERRUPTSTATUS);//Clear the interrupt
+	//outb(REG_PAGE2, COMMAND);//fix  Next packet 46?
+	outb(REG_PAGE0, COMMAND);
+	//printf("\n\nCurrent ISR status:	%02x \n\n",inb(INTERRUPTSTATUS));
+}
+
+int received_packet(){
+
+	dp8390_pkt_hdr header;
+
+	unsigned short packet_ptr;
+
+
+	outb(CMD_NO_DMA | CMD_START | REG_PAGE0, COMMAND);
+  outb(REG_PAGE1, COMMAND);
+
+  while(next_pkt !=inb(COMMAND+NE_P1_CURR)){
+		printf("Next Packet= %02x CURR=%02x\n",next_pkt,inb(COMMAND+NE_P1_CURR));
+  	packet_ptr= next_pkt*256;
+		readmem(&header,packet_ptr,sizeof(dp8390_pkt_hdr));
+    printf("pkt=0x%02X\n",++pkt);
+    outb(REG_PAGE1, COMMAND);
+    if(pkt==15)
+        while(1);
+		}
+
+	return paquetes;
+}
+
+int pool(){
+
+while(1)
+{
+irq_event();
+}
+
+
+}
+
+
+static int irq_event()
+{
+	unsigned char irq_value;
+  //while(1)
+  {
+    //printf("\n######### IRQ= %02x #########\n",inb(COMMAND + P0_ISR));
+  outb(CMD_NO_DMA | CMD_START,INTERRUPTSTATUS);
+
+	while((irq_value = inb(COMMAND + P0_ISR))!=0)
+		{
+			printf("IRQ event: %02x %02x\n",irq_value,irq_value & ISR_VL_PTX);
+			outb(irq_value,COMMAND + P0_ISR);
+
+			if(irq_value & ISR_VL_OVW){
+				printf("Overflow\n");
+        //overflow();
+        while(1);
+				}
+			if(irq_value & ISR_VL_PRX){
+				printf("######### Packet Received #########\n",k);
+				received_packet();
+				//packet_selector();
+        outb(REG_PAGE0, COMMAND);
+				}
+
+			if(irq_value & ISR_VL_PTX){
+				printf(" Packet Transmitted ##########\n");
+				}
+
+			if(irq_value & ISR_VL_RDC)
+				printf("DMA complete\n");
+
+			 outb( CMD_NO_DMA | CMD_START,INTERRUPTSTATUS);
+		}
+
+  }
+	return 0;
 }

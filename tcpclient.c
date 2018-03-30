@@ -1,32 +1,32 @@
 /***************************************************************************/
-/*                                                                         */    
-/* Client program which gets as parameter the server name or               */    
-/*     address and tries to send the data into non-blocking server.        */    
-/*                                                                         */    
-/* The message is sent after 5 seconds of wait                             */    
-/*                                                                         */    
-/*                                                                         */    
-/* based on Beej's program - look in the simple TCp client for further doc.*/    
-/*                                                                         */    
-/*                                                                         */    
+/*                                                                         */
+/* Client program which gets as parameter the server name or               */
+/*     address and tries to send the data into non-blocking server.        */
+/*                                                                         */
+/* The message is sent after 5 seconds of wait                             */
+/*                                                                         */
+/*                                                                         */
+/* based on Beej's program - look in the simple TCp client for further doc.*/
+/*                                                                         */
+/*                                                                         */
 /***************************************************************************/
-    #include <stdio.h> 
-    #include <stdlib.h> 
-    #include <errno.h> 
-    #include <string.h> 
-    #include <netdb.h> 
-    #include <sys/types.h> 
-    #include <netinet/in.h> 
-    #include <sys/socket.h> 
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <errno.h>
+    #include <string.h>
+    #include <netdb.h>
+    #include <sys/types.h>
+    #include <netinet/in.h>
+    #include <sys/socket.h>
     #include <unistd.h>
 
-    #define PORT 0x100    /* the port client will be connecting to */
+    #define PORT 231    /* the port client will be connecting to */
 
     #define MAXDATASIZE 100 /* max number of bytes we can get at once */
 
     int main(int argc, char *argv[])
     {
-        int sockfd, numbytes;  
+        int sockfd, numbytes;
         char buf[MAXDATASIZE];
         struct hostent *he;
         struct sockaddr_in their_addr; /* connector's address information */
@@ -66,7 +66,7 @@
         	if ((numbytes=recv(sockfd, buf, MAXDATASIZE, 0)) == -1) {
             		perror("recv");
             		exit(1);
-		}	
+		}
 
 	        buf[numbytes] = '\0';
 
@@ -79,5 +79,3 @@
 
         return 0;
     }
-
-

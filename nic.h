@@ -12,7 +12,7 @@
 #error You must compile this driver with "-O"!
 #endif
 
-
+static unsigned char next_pkt =0;
 
 typedef struct in_addr
 {
@@ -41,6 +41,14 @@ struct netif {
 };
 
 
+typedef struct t_dp8390_pkt_hdr
+{
+ unsigned char NextPacketPointer;
+ unsigned char ReceiveStatus;
+ unsigned short length;
+
+} __attribute__ ((packed)) dp8390_pkt_hdr;
+
 typedef struct raw_packet
 {
 unsigned char *data;
@@ -49,10 +57,19 @@ void *next;
 void *prev;
 }raw_packet_t;
 
+raw_packet_t	*pack,*root;
+
+static int pkt=0;
+static int paquetes=0;
+
 int send_raw_packet(unsigned char *packet,int len,int proto);
 int inet_aton(const char *cp, in_addr *ap);
 int get_raw_packet(unsigned char *packet,int len,int proto);
-
+int par();
+int nic_reset();
+void overflow();
+int received_packet();
+int pool();
 
 
 #endif

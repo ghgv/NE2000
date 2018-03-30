@@ -22,6 +22,7 @@
 #define	IPPROTO_MAX		256
 
 #include "../nic.h"
+#include "../ip.h"
 
 /* Internet address. */
 /*struct in_addr {

@@ -103,10 +103,7 @@
 #define ETH_P_HDLC		0x0019		/* HDLC frames			*/
 #define ETH_P_ARCNET		0x001A		/* 1A for ArcNet :-)            */
 
-#define IPPROTO_IP              0               /* dummy for IP */
-#define IPPROTO_UDP             17              /* user datagram protocol */
-#define IPPROTO_TCP             6               /* tcp */
-#define IPPROTO_ICMP            1               /*ICMP*/
+
 
 /*TCP flags*/
 #define SYN 			0x02
@@ -169,7 +166,12 @@
 
 #define PAGESTART  COMMAND+01
 #define PAGESTOP  COMMAND+02
+
+#define NE_P2_PAGESTART  COMMAND+01
+#define NE_P2_PAGESTOP  COMMAND+02
+
 #define BOUNDARY  COMMAND+03
+#define NE_P0_BOUNDARY COMMAND+03
 #define TRANSMITSTATUS  COMMAND+04
 #define TRANSMITPAGE  COMMAND+04
 #define TRANSMITBYTECOUNT0  COMMAND+0x05
@@ -219,44 +221,24 @@
 typedef unsigned short u16;
 typedef unsigned long u32;
 
-static unsigned char next_pkt =0;
+
 static int k=0;
 
 static unsigned int  rx_page_start = 64;
 
 
-typedef struct t_dp8390_pkt_hdr
-{
- unsigned char NextPacketPointer;
- unsigned char ReceiveStatus;
- unsigned short length;
 
-} __attribute__ ((packed)) dp8390_pkt_hdr;
 
 //END OF DP8390
 
 
-typedef struct header
-{
-    unsigned char ip_hl:4, ip_v:4;/* this means that each member is 4 bits */
-    unsigned char ip_tos;       //1 Byte
-    unsigned short int ip_len;  //2 Byte
-    unsigned short int ip_id;   //2 Byte
-    unsigned short int ip_off;  //2 Byte
-    unsigned char ip_ttl;       //1 Byte
-    unsigned char ip_p;         //1 Byte
-    unsigned short int ip_sum;  //2 Byte
-    unsigned int ip_src;        //4 Byte
-    unsigned int ip_dst;        //4 Byte
 
-
-} __attribute__((packed)) ipheader;
 
 /*
  *	This is an Ethernet frame header.
  */
 
-
+unsigned char ether_packet[1560];
 
 typedef struct t_ethhdr {
 	unsigned char	h_dest[6];	/* destination eth addr	*/
@@ -264,7 +246,7 @@ typedef struct t_ethhdr {
 	unsigned int	h_proto;		/* packet type ID field	*/
 } __attribute__((packed)) ethhdr_t;
 
-unsigned char ether_packet[1560];
+
 
 
 typedef unsigned short 	uint16;

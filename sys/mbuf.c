@@ -1,6 +1,7 @@
 #include "mbuf.h"
 #include "socket.h"
 #include "../tcp.h"
+#include "../ip.h"
 #include "../testne2000.h"
 #include <stdio.h>
 
@@ -152,7 +153,7 @@ int send_buff(int f, unsigned char *addr , int count){
             tcphead.dest_port   = tcb->tcb_rport;
             tcphead.seq_number  = htonl(tcb->tcb_snext);
             tcphead.ack_number  = htonl(tcb->tcb_suna);
-            tcphead.flags       = 0x1050;
+            tcphead.flags       = 0x0250;
             tcphead.windows     =100;
             tcphead.checksum    =0;
             tcphead.urgent      = 0;

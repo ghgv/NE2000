@@ -9,6 +9,8 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <termios.h>
+#include <pthread.h>
 
 
 #include <stdio.h>
@@ -26,9 +28,49 @@
 #error You must compile this driver with "-O"!
 #endif
 
-raw_packet_t	*pack,*root;
-int paquetes=0;
+
+
 const char *progresso = "-\\|/";
+
+
+#define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
+#define BYTE_TO_BINARY(byte)  \
+  (byte & 0x80 ? '1' : '0'), \
+  (byte & 0x40 ? '1' : '0'), \
+  (byte & 0x20 ? '1' : '0'), \
+  (byte & 0x10 ? '1' : '0'), \
+  (byte & 0x08 ? '1' : '0'), \
+  (byte & 0x04 ? '1' : '0'), \
+  (byte & 0x02 ? '1' : '0'), \
+  (byte & 0x01 ? '1' : '0')
+
+
+int kbhit(void)
+{
+  struct termios oldt, newt;
+  int ch;
+  int oldf;
+
+  tcgetattr(STDIN_FILENO, &oldt);
+  newt = oldt;
+  newt.c_lflag &= ~(ICANON | ECHO);
+  tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+  oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
+  fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
+
+  ch = getchar();
+
+  tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+  fcntl(STDIN_FILENO, F_SETFL, oldf);
+
+  if(ch != EOF)
+  {
+    ungetc(ch, stdin);
+    return 1;
+  }
+
+  return 0;
+}
 
 u16 ip_sum_calc(u16 len_ip_header, u16 *buff)
 {
@@ -290,6 +332,9 @@ int main(char argc, char **argv)
 	char sel[30];
 	unsigned char s,d;
 	unsigned char data[100],i=0;
+  pthread_t thread1, thread2;
+  int  iret1, iret2;
+
 
 	root=(raw_packet_t *)malloc(sizeof(raw_packet_t));
 	root->next=NULL;
@@ -305,53 +350,47 @@ int main(char argc, char **argv)
 
 	sockaddr_in_t dest;
 	dest.sin_family = AF_INET;
-	dest.sin_port = htons(23);//htons(4100);//dest_port
+	dest.sin_port = htons(231);//htons(4100);//dest_port
 	dest.sin_addr.s_addr=inet_addr("192.168.2.109");
 
 	NIC = (struct ne *) malloc(sizeof(struct ne));
 	nic_reset();
 	par();
 	ne_probe(NIC);
-
   init_buf();
-	sock=socket(AF_INET,SOCK_DGRAM,IPPROTO_TCP);
-	printf("Socket Number %i\n",sock);
 
-  printf("Result of connect: 	%i\n",connect_s(sock,&dest,sizeof(dest)));
-  //printf("Result from read: 	%i bytes\n",read_s(sock,data,100));
-	//
-	fflush(stdout);
+  iret1 = pthread_create( &thread1, NULL, pool, NULL);
 
+  //pthread_join( thread1, NULL);
 
+	//sock=socket(AF_INET,SOCK_DGRAM,IPPROTO_TCP);
+	//printf("Socket Number %i\n",sock);
+
+  //printf("\nResult of connect: 	%i\n",connect_s(sock,&dest,sizeof(dest)));
+  fflush(stdout);
 
 	while(e!='s'){
-		//scanf("%c",&e);
+    printf(">");
+		scanf("%c",&e);
 		int g;
-		irq_event();
-		g=read_s(sock,data,100);
+		//irq_event();
+		//*g=read_s(sock,data,100);
 		//printf("G = %i\n",g);
-		if(g>0){
+		/*if(g>0){
 			printf("\nIncoming bytes %i\n",g);
 			for(i=0;i<g;i++)
 			{
 		 	printf("%i.:0x%02x ",i,*(data+i));
 			}
 			printf("\n");
-		}
+		}*/
 
-		   /*     if(i % 100 == 0)
-		        {
-		            printf("%c%c%c]",8,8,progresso[(i/100) % 4]);
-		            fflush(stdout);
-		        }
-		i++;*/
-//////////////////
 
-  printf(">");
-	e=scanf("%s",&sel);
+
+/*
 	char * pch;
 	char *argv[4];
-
+//  e=scanf("%s\n",&sel );
 
 	pch = strtok (sel," ,.-");
 	  while (pch != NULL)
@@ -360,7 +399,8 @@ int main(char argc, char **argv)
 			//argv[j++]=pch;
 	    pch = strtok (NULL, " ,.-");
 	  }
- 	g=write_s(sock,&sel,strlen(sel));
+	if(strcmp(sel,"show")!=0)
+ 		g=write_s(sock,&sel,strlen(sel));*/
 	////////////////////////
 	}
 close_s(sock);
@@ -371,169 +411,9 @@ printf("Exiting..\n");
 
 
 
-static int irq_event()
-{
-
-	unsigned char irq_value;
-
-	outb(CMD_NO_DMA | CMD_START,INTERRUPTSTATUS);
-
-	while((irq_value = inb(COMMAND + P0_ISR))!=0)
-		{
-
-			printf("IRQ=	%02x %02x\n",irq_value,irq_value & ISR_VL_PTX);
-			outb(irq_value,COMMAND + P0_ISR);
-
-			if(irq_value & ISR_VL_OVW){
-				printf("Overflow\n");
-
-				}
-			if(irq_value & ISR_VL_PRX){
-				printf("######### Packet Received #########\n",k);
-				received_packet();
-				packet_selector();
-				}
-
-			if(irq_value & ISR_VL_PTX){
-				printf(" Packet Transmitted ##########\n");
-
-				}
-
-			if(irq_value & ISR_VL_RDC)
-				printf("DMA complete\n");
-
-			 outb( CMD_NO_DMA | CMD_START,INTERRUPTSTATUS);
-		}
-	return 0;
-}
-
-
-int nic_reset()
-{
-	unsigned char c;
-
-	c = inb(COMMAND + NS_RESET);
-	outb(c,COMMAND + NS_RESET);
-	printf("Reset %02x\n",c);
-}
-
-int par(){
-
-	int j;
-	unsigned char c;
-
- /*Assign the MAC address*/
-
-	outb( 0x40,COMMAND);//PAGE 1
-	outb( 0x00,COMMAND+NE_P1_PAR0);
-	outb( 0x24,COMMAND+NE_P1_PAR1);
-	outb( 0x8c,COMMAND+NE_P1_PAR2);
-	outb( 0x73,COMMAND+NE_P1_PAR3);
-	outb( 0xef,COMMAND+NE_P1_PAR4);
-	outb( 0x9c,COMMAND+NE_P1_PAR5);
-}
-
-int received_packet(){
-
-	dp8390_pkt_hdr header;
-
-	unsigned short packet_ptr;
-
-
-	outb(CMD_NO_DMA | CMD_START | REG_PAGE0, COMMAND);
-	outb(REG_PAGE1, COMMAND);
-
-	while(next_pkt !=inb(COMMAND+NE_P1_CURR)){
-		printf("Next Packet= %02x CURR=%02x\n",next_pkt,inb(COMMAND+NE_P1_CURR));
-		//printf(".");
-		packet_ptr= next_pkt*256;
-		//printf("Next Packet= %02x CURR=%02x, Packet Ptr=%02x\n",next_pkt,inb(COMMAND+NE_P1_CURR),packet_ptr);
-		readmem(&header,packet_ptr,sizeof(dp8390_pkt_hdr));
-		outb(REG_PAGE1, COMMAND);
-		#ifdef DEBUG
-		printf("Current Page=%02x\n",inb(COMMAND+NE_P1_CURR));
-		#endif
-		}
-
-
-	outb(REG_PAGE0, COMMAND);
-	return paquetes;
-}
-
-void readmem(dp8390_pkt_hdr *dest,unsigned short src ,int n){
-
- 	int i;
-	char *tmp = (char*)dest,m;
-	unsigned char pl0,pl1,*pos;
-	unsigned short pal;
-	unsigned char next_pack;
-	raw_packet_t *newpack;
-
-
-	n=4;
-
-	outb(REG_PAGE0, COMMAND);
-	outb(inb(BOUNDARY),REMOTESTARTADDRESS1);
-	outb(0X00,REMOTESTARTADDRESS0);
-	outb(0X04, REMOTEBYTECOUNT0); //Read 4 bytes
-	outb(0X00, REMOTEBYTECOUNT1);
-	outb(0x0A, COMMAND);
-
-	dest->ReceiveStatus=inb(IOPORT);
-
-	next_pkt=inb(IOPORT);
-	unsigned char pac;
-	int len;
-	dest->NextPacketPointer=next_pkt;
-	pl0=inb(IOPORT);
-	dest->NextPacketPointer=next_pkt;
-	pl1=inb(IOPORT);
-
-	pal=((pl1<<8)& 0xff00)+pl0-sizeof(dp8390_pkt_hdr);
-	dest->length=pal;
-
-	outb(inb(BOUNDARY),REMOTESTARTADDRESS1);
-	outb(0X04,REMOTESTARTADDRESS0);
-	outb(pal&0xff, REMOTEBYTECOUNT0);
-	outb((pal>>8)&0xff, REMOTEBYTECOUNT1);
-	outb( 0x0A, COMMAND);
-	for(i=0;i<pal;i++){
-		ether_packet[i]=inb(IOPORT);
-		//#ifdef DEBUG
-		printf("0x%02hhx ",ether_packet[i]);
-		//#endif
-	}
-	newpack=(raw_packet_t	*)malloc(sizeof(raw_packet_t));
-	newpack->len=pal;
-	newpack->next=NULL;
-	newpack->prev=pack;
-	newpack->data=(unsigned char *)malloc(pal);
-	pos=newpack->data;
-
-	memcpy(pos,&ether_packet[0],pal);
-	pack->next=newpack;
-
-	paquetes++;
-
-	while(!(inb(INTERRUPTSTATUS)) & 0x40);
-
-	outb(next_pkt,BOUNDARY);
-
-	if((next_pkt-1) < PSTART)
-		outb(PSTOP-1,BOUNDARY);
-
-	outb(0x40,INTERRUPTSTATUS);//Clear the interrupt
-	outb(0x02,INTERRUPTSTATUS);//Clear the interrupt
-	outb(0x01,INTERRUPTSTATUS);//Clear the interrupt
-	outb(REG_PAGE2, COMMAND);//fix  Next packet 46?
-
-	outb(REG_PAGE0, COMMAND);
-	printf("\n\nCurrent ISR status:	%02x \n\n",inb(INTERRUPTSTATUS));
 
 
 
-
-}
 
 int packet_selector()
 {
@@ -541,23 +421,21 @@ int packet_selector()
 	arp_frame *arpa;
 	unsigned short EthernetP;
 	raw_packet_t *pack,*prev,*post;
-	int s;
+	int s=0;
 
 	printf("\n######## Packet selector[%i]####_# 0x%X 0x%X\n",paquetes,root,root->next);
 	for(pack=root;pack!=NULL;pack=pack->next)
 		{
 			printf("%i. Curr: 0x%02X Prev: 0x%02X Next: 0x%02X\n",++j,pack,pack->prev,pack->next);
 		}
-
-
-	//memcpy(&EthernetP,&ether_packet[12],sizeof(unsigned short));
-	//memcpy(arpa,&ether_packet[14],sizeof(arp_frame));
 	for(pack=root;pack!=NULL;pack=pack->next)
 		{
 			printf("\nPacket %i length: %i\n",++s,pack->len);
 			printf("Curr: 0x%02X Next: 0x%02X\n",pack,pack->next);
 			printf("Data:\n ");
 			prev=pack->prev;
+      if (pack->len==0)
+       return;
 			 for(i=0;i<pack->len;i++)
 			   printf("0x%02X ",(unsigned char )(pack->data[i]));
 
@@ -594,9 +472,6 @@ int packet_selector()
 						free(pack);
 						break;
 	}
-	//printf("\n##### Status packet 0x%X 0x%X \n",pack,pack->next);
-
-
 }
 
 printf("\n######## end of packet selector####_# %x %x %x\n",prev,prev->prev,prev->next);
