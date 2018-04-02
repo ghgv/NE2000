@@ -4,13 +4,14 @@
 #include "ip.h"
 #include "sys/socket.h"
 #include "sys/mbuf.h"
+#include "commands.h"
 
 #include <unistd.h>
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
 #include <termios.h>
-#include <pthread.h>
+
 
 
 #include <stdio.h>
@@ -28,7 +29,10 @@
 #error You must compile this driver with "-O"!
 #endif
 
+#include <pthread.h>
 
+extern pthread_mutex_t lock;
+sockaddr_in_t dest;
 
 const char *progresso = "-\\|/";
 
@@ -328,12 +332,20 @@ static int ne_probe(struct ne *ne) {
 int main(char argc, char **argv)
 {
 	char e;
-	int sock;
+	int sock,j;
 	char sel[30];
 	unsigned char s,d;
 	unsigned char data[100],i=0;
-  pthread_t thread1, thread2;
-  int  iret1, iret2;
+
+  if (pthread_mutex_init(&lock, NULL) != 0)
+  {
+      printf("\n mutex init failed\n");
+      return 1;
+  }
+
+  char * pch;
+  char arguv[15][15];
+
 
 
 	root=(raw_packet_t *)malloc(sizeof(raw_packet_t));
@@ -348,7 +360,7 @@ int main(char argc, char **argv)
 
 	struct ne *NIC;
 
-	sockaddr_in_t dest;
+
 	dest.sin_family = AF_INET;
 	dest.sin_port = htons(231);//htons(4100);//dest_port
 	dest.sin_addr.s_addr=inet_addr("192.168.2.109");
@@ -359,19 +371,13 @@ int main(char argc, char **argv)
 	ne_probe(NIC);
   init_buf();
 
-  iret1 = pthread_create( &thread1, NULL, pool, NULL);
-
-  //pthread_join( thread1, NULL);
-
-	//sock=socket(AF_INET,SOCK_DGRAM,IPPROTO_TCP);
+  //sock=socket(AF_INET,SOCK_DGRAM,IPPROTO_TCP);
 	//printf("Socket Number %i\n",sock);
-
   //printf("\nResult of connect: 	%i\n",connect_s(sock,&dest,sizeof(dest)));
   fflush(stdout);
 
 	while(e!='s'){
-    printf(">");
-		scanf("%c",&e);
+    printf("%s#",sysname);
 		int g;
 		//irq_event();
 		//*g=read_s(sock,data,100);
@@ -384,25 +390,18 @@ int main(char argc, char **argv)
 			}
 			printf("\n");
 		}*/
+    //e=scanf("%s\n",&sel );
 
+    gets (sel);
+    decode_command(&sel);
 
+/*if(strcmp(sel,"show")!=0)
+ 		 g=write_s(sock,&sel,strlen(sel));*/
 
-/*
-	char * pch;
-	char *argv[4];
-//  e=scanf("%s\n",&sel );
+    j=0;
 
-	pch = strtok (sel," ,.-");
-	  while (pch != NULL)
-	  {
-	    printf ("%s\n",pch);
-			//argv[j++]=pch;
-	    pch = strtok (NULL, " ,.-");
-	  }
-	if(strcmp(sel,"show")!=0)
- 		g=write_s(sock,&sel,strlen(sel));*/
-	////////////////////////
 	}
+    printf("sizeof(pch): ",strlen(pch));
 close_s(sock);
 printf("Exiting..\n");
 

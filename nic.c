@@ -1,12 +1,18 @@
 #include "sys/mbuf.h"
 #include <stdio.h>
+#include <pthread.h>
 #include "nic.h"
 #include "testne2000.h"
 
 const char *progress = "-\\|/";
+extern pthread_mutex_t lock;
 
 int send_raw_packet(unsigned char *packet,int len,int proto)
 {
+
+
+  pthread_mutex_lock(&lock);
+
   int count =100,i,s,conteo;
   #ifdef DEBUG
   printf("\n########### Inside Send Raw Packet ########### \n");
@@ -33,7 +39,7 @@ int send_raw_packet(unsigned char *packet,int len,int proto)
   #endif
 
 
-  printf("Count: %i  ISR: %x\n",count,inb(INTERRUPTSTATUS));
+  printf("\nCount: %i  ISR: %x\n",count,inb(INTERRUPTSTATUS));
   outb(0xff,INTERRUPTSTATUS); // Clear all interrupts
   printf("TRANSMITBUFFER: %02x  ISR: %x\n",TRANSMITBUFFER,inb(INTERRUPTSTATUS));
   if(count<60){
@@ -81,8 +87,8 @@ int send_raw_packet(unsigned char *packet,int len,int proto)
   conteo++;
   }
   //for (i=0;i<(14+len);i++)
-  //  printf("%i.0x%02X ",i,*(ether_packet+i));
-    printf("\nWaiting_for Interrupt [-]");
+  //  printf("%i.0x%02X "S,i,*(ether_packet+i));
+    printf("\nWaiting for Interrupt in send_raw_packet [-]");
     s=inb(INTERRUPTSTATUS);
     i=0;
   	while((s&0x40)!=0x40) //Remote DMA complete?
@@ -96,6 +102,8 @@ int send_raw_packet(unsigned char *packet,int len,int proto)
          }
          i++;
       }
+      printf("\nWaiting for Interrupt in send_raw_packet after");
+    //printf("\n");
 //  	printf("\nInterrup status: 0x%x, count %i %x %x\n",s, count,count & 0xff,count >>8);
   	outb(TRANSMITBUFFER,TRANSMITPAGE);
     if(count<60){
@@ -111,7 +119,8 @@ int send_raw_packet(unsigned char *packet,int len,int proto)
   	outb(0x26,COMMAND);//PAge 0, remote write,Transmite, start
 
   //  printf("\n########### End Send Raw Packet ########### \n");
-
+    enviados++;
+    pthread_mutex_unlock(&lock);
     return 0;
 }
 
@@ -193,7 +202,11 @@ int nic_reset()
   outb(REG_PAGE0,COMMAND);
 	c = inb(COMMAND + NS_RESET);
 	outb(c,COMMAND + NS_RESET);
-  printf("Reset %02x\n",c);
+  outb(0xff,INTERRUPTSTATUS);
+  sleep(1);
+  printf("Reset 0x%02x\n",c);
+
+
 }
 
 void overflow()
@@ -217,6 +230,7 @@ void readmem(dp8390_pkt_hdr *dest,unsigned short src ,int n){
 	unsigned char pl0,pl1,*pos;
 	unsigned short pal;
 	unsigned char next_pack;
+  unsigned char BNDY;
 	raw_packet_t *newpack;
   unsigned char pac;
 	int len;
@@ -226,13 +240,17 @@ void readmem(dp8390_pkt_hdr *dest,unsigned short src ,int n){
 	n=4;
 
 	outb(REG_PAGE0, COMMAND); //to read the BOUNDARY
-	outb(inb(NE_P0_BOUNDARY),REMOTESTARTADDRESS1);
+  BNDY=inb(NE_P0_BOUNDARY);
+  printf("BOUNDARY: 0x%X\n ",BNDY);
+	outb(BNDY,REMOTESTARTADDRESS1);
 	outb(0X00,REMOTESTARTADDRESS0);
 	outb(0X04, REMOTEBYTECOUNT0); //Read 4 bytes
 	outb(0X00, REMOTEBYTECOUNT1);
 	outb(CMD_REMOTE_READ+CMD_START, COMMAND);
 	dest->ReceiveStatus=inb(IOPORT);
+  printf("Status: 0x%X\n ",dest->ReceiveStatus);
 	next_pkt=inb(IOPORT);
+  printf("Next Packet Pointer page: 0x%X \n ",next_pkt);
 	dest->NextPacketPointer=next_pkt;
 	pl0=inb(IOPORT);
 	pl1=inb(IOPORT);
@@ -246,7 +264,9 @@ void readmem(dp8390_pkt_hdr *dest,unsigned short src ,int n){
 	outb((pal>>8)&0xff, REMOTEBYTECOUNT1);
 	outb( CMD_REMOTE_READ+CMD_START, COMMAND);
 
-  printf("LEN: 0x%02hhx %i\n ",pal,pal);
+  printf("LEN: 0x%X %i\n ",pal,pal);
+  if(pal>1200)
+    return;
 	for(i=0;i<pal;i++){
 		ether_packet[i]=inb(IOPORT);
 		printf("0x%02hhx ",ether_packet[i]);
@@ -322,10 +342,11 @@ irq_event();
 
 static int irq_event()
 {
-	unsigned char irq_value;
+pthread_mutex_lock(&lock);
+  unsigned char irq_value;
   //while(1)
   {
-    //printf("\n######### IRQ= %02x #########\n",inb(COMMAND + P0_ISR));
+  //  printf("\n######### IRQ= %02x #########\n",inb(COMMAND + P0_ISR));
   outb(CMD_NO_DMA | CMD_START,INTERRUPTSTATUS);
 
 	while((irq_value = inb(COMMAND + P0_ISR))!=0)
@@ -347,14 +368,20 @@ static int irq_event()
 
 			if(irq_value & ISR_VL_PTX){
 				printf(" Packet Transmitted ##########\n");
+        outb(REG_PAGE0, COMMAND);
 				}
 
-			if(irq_value & ISR_VL_RDC)
-				printf("DMA complete\n");
+			if(irq_value & ISR_VL_RDC){
+        printf("DMA completed\n");
+        outb(0x40,COMMAND + P0_ISR);
+        outb(REG_PAGE0, COMMAND);
+      }
+
 
 			 outb( CMD_NO_DMA | CMD_START,INTERRUPTSTATUS);
 		}
 
   }
+  pthread_mutex_unlock(&lock);
 	return 0;
 }

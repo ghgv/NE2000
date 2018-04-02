@@ -60,7 +60,7 @@ void *prev;
 raw_packet_t	*pack,*root;
 
 static int pkt=0;
-static int paquetes=0;
+static int paquetes=0,enviados=0;
 
 int send_raw_packet(unsigned char *packet,int len,int proto);
 int inet_aton(const char *cp, in_addr *ap);

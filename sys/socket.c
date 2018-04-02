@@ -11,30 +11,34 @@ int socket_number=0; //socket_number
 int socket(int domain, int type, int protocol){
   int i;
 
+
   if(domain!= AF_INET )
-    return 1;
+    return -1;
 
   if(type!=SOCK_DGRAM)
-      return 1;
+      return -1;
 
    if(socket_number>MAX_FILE_DESCRIPTORS)
-     return 1;
+     return -1;
 
    for(i=1;i<MAX_FILE_DESCRIPTORS;i++)
     {
+
       if(fd[i].sck==0)
         {
-        if(protocol==IPPROTO_TCP)
+        if(protocol==IPPROTO_TCP){
           fd[i].sck=(tcb_t *)malloc(sizeof(tcb_t));
-        if(fd[i].sck==0)
-            return 1;
+          fd[i].type=type;
+          fd[i].protocol=protocol;
+        }
 
-        socket_number=i;
+        if(fd[i].sck==0)
+            return -1;
         return i;
         }
     }
 
-   return 1;
+   return -1;
 }
 
 int close_s(int f){
@@ -43,6 +47,7 @@ int close_s(int f){
     return -1;//Socket did not exist
 
     free(fd[f].sck);
+    fd[f].sck=0;
     return 0;
 }
 
