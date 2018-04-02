@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include "nic.h"
+#include "arp.h"
 #include "testne2000.h"
 
 const char *progress = "-\\|/";
@@ -362,7 +363,7 @@ pthread_mutex_lock(&lock);
 			if(irq_value & ISR_VL_PRX){
 				printf("######### Packet Received #########\n",k);
 				received_packet();
-				//packet_selector();
+				packet_selector();
         outb(REG_PAGE0, COMMAND);
 				}
 
@@ -384,4 +385,74 @@ pthread_mutex_lock(&lock);
   }
   pthread_mutex_unlock(&lock);
 	return 0;
+}
+
+
+int packet_selector()
+{
+	int i,j=0;
+	arp_frame *arpa;
+	unsigned short EthernetP;
+	raw_packet_t *pack,*prev,*post;
+	int s=0;
+
+	printf("\n######## Packet selector[%i]####_# 0x%X 0x%X\n",paquetes,root,root->next);
+	for(pack=root;pack!=NULL;pack=pack->next)
+		{
+			printf("%i. Curr: 0x%02X Prev: 0x%02X Next: 0x%02X\n",++j,pack,pack->prev,pack->next);
+		}
+	for(pack=root;pack!=NULL;pack=pack->next)
+		{
+			printf("\nPacket %i length: %i\n",++s,pack->len);
+			printf("Curr: 0x%02X Next: 0x%02X\n",pack,pack->next);
+			printf("Data:\n ");
+			prev=pack->prev;
+      if (pack->len==0)
+       continue;
+			 for(i=0;i<pack->len;i++)
+			   printf("0x%02X ",(unsigned char )(pack->data[i]));
+
+			memcpy(&EthernetP,&pack->data[12],sizeof(unsigned short));
+
+
+	switch (ntohs(EthernetP)) {
+		case ETH_P_IP:
+						printf("\nIPv4 Packet:\n");
+						mbuf(pack);
+						printf("prev : 0x%X 0x%X\n",prev,pack->next);fflush(stdout);
+						prev->next=pack->next;
+						if(pack->next!=NULL)
+							{
+							post=pack->next;
+							post->prev=pack->prev;
+
+							}
+						free(pack->data);
+						free(pack);
+						//decode_ip(&ether_packet);
+						break;
+		case ETH_P_ARP:
+						printf("\n\n ARP Packet:\n");
+						decode_arp(pack);
+						printf("prev : 0x%X 0x%X\n",prev,pack->next);fflush(stdout);
+						prev->next=pack->next;
+						if(pack->next!=NULL)
+							{
+							post=pack->next;
+							post->prev=pack->prev;
+							}
+						free(pack->data);
+						free(pack);
+						break;
+	}
+}
+
+printf("\n######## end of packet selector####_# %x %x %x\n",prev,prev->prev,prev->next);
+
+root->next=NULL;
+root->prev=NULL;
+root->len=0;
+pack=root;
+paquetes=0;
+
 }

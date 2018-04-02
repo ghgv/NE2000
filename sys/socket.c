@@ -10,7 +10,7 @@ int socket_number=0; //socket_number
 
 int socket(int domain, int type, int protocol){
   int i;
-
+  tcb_t *tcb;
 
   if(domain!= AF_INET )
     return -1;
@@ -30,6 +30,7 @@ int socket(int domain, int type, int protocol){
           fd[i].sck=(tcb_t *)malloc(sizeof(tcb_t));
           fd[i].type=type;
           fd[i].protocol=protocol;
+          tcb->tcb_state=TCP_CLOSED;
         }
 
         if(fd[i].sck==0)

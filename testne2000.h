@@ -276,7 +276,7 @@ int par();
 
 int received_packet();
 void readmem(dp8390_pkt_hdr *dest,unsigned short src ,int n);
-int packet_selector();
+
 
 #define htons(A) ((((uint16)(A) & 0xff00) >> 8) | \
 (((uint16)(A) & 0x00ff) << 8))

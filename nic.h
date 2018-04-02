@@ -70,6 +70,7 @@ int nic_reset();
 void overflow();
 int received_packet();
 int pool();
+int packet_selector();
 
 
 #endif

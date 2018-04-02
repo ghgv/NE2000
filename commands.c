@@ -251,15 +251,20 @@ int open_socket(){
 
 int list_sockets(){
 	int i;
+	tcb_t *tcb;
+
 	for(i=1;i<MAX_FILE_DESCRIPTORS;i++)
 	 {
 		 if(fd[i].sck!=0){
+			tcb=fd[i].sck;
 			printf("Socket[%i]:\n Type: %i\n",i,fd[i].type);
-			printf(" Protocol: %i\n\n",fd[i].protocol);
+			printf(" Protocol: %i\n",fd[i].protocol);
+			printf(" Status: %s\n",STATES[tcb->tcb_state]);
+
 		 }
 
 	}
-	pthread_mutex_unlock(&lock);
+
 }
 
 int close_socket(char * value){
@@ -323,7 +328,7 @@ printf("Connecting to:\n");
 	printf("IP: 0x%X\n",dest.sin_family);
 
 		connect_s(socket1,&dest,sizeof(dest));
-	
+
 
 	int msec = 0, trigger = 500;
 	int iterations=0;/* 10ms */

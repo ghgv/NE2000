@@ -13,7 +13,11 @@
 
 
 #define SYN_SENT 0x01
+#define TCP_CLOSED 0x00
 
+static const char *STATES[] = {
+    "CLOSED", "SYN_SENT", "SYN_RECEIVED", "ESTABLISHED",
+};
 /*typedef struct
 {
     unsigned long s_addr;  // load with inet_aton()
