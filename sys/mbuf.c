@@ -24,6 +24,14 @@ int mbuf(raw_packet_t *pack){
   mbuf_t  *buffer;
   int length,i;
   unsigned char *s;
+  ipheader *aheader;
+  tcpheader_t *atcpheader;
+  unsigned short source_port;
+  unsigned short dest_port;
+  unsigned int ip_src;        //4 Byte
+  unsigned int ip_dst;        //4 Byte
+  tcb_t *tcb;
+
 
   length =pack->len;
 
@@ -37,6 +45,34 @@ int mbuf(raw_packet_t *pack){
     buffer->m_len=pack->len;
     buffer->m_type=(int) 34;s=(unsigned char *) buffer;
     memcpy(s+48,pack->data,length);
+    aheader=(pack->data+14);
+    printf("\nIP ver: 0x%02X ",aheader->ip_v &0xf);
+    printf("\nIP hl: 0x%02X ",aheader->ip_hl &0xf);
+    printf("\nIP tos: 0x%X ",aheader->ip_tos);
+    printf("\nIP length: 0x%X ",ntohs(aheader->ip_len));
+    printf("\nIP protocol: 0x%02X ",aheader->ip_p);
+    printf("\nIP Src: 0x%X ",ntohl(aheader->ip_src));
+    printf("\nIP Dst: 0x%X ",ntohl(aheader->ip_dst));
+    if(aheader->ip_p==0x6)
+      {
+
+        atcpheader=(pack->data+14+20);
+        printf("\nTCP Source port: %i 0x%X ",ntohs(atcpheader->source_port),ntohs(atcpheader->source_port));
+        printf("\nTCP Dst port: %i 0x%X \n",ntohs(atcpheader->dest_port),ntohs(atcpheader->dest_port));
+        for(i=1;i<MAX_FILE_DESCRIPTORS;i++)
+          {
+            tcb=fd[i].sck;
+            if(tcb!=NULL)
+              {
+                printf("Local IP: 0x%08X 0x%08X, Local port: 0x%X 0x%X\n",htonl(tcb->tcb_lip.s_addr),ntohl(aheader->ip_dst) ,htons(tcb->tcb_lport),ntohs(atcpheader->dest_port ));
+                if(tcb->tcb_lip.s_addr==aheader->ip_dst && tcb->tcb_lport==atcpheader->dest_port )
+                    if(tcb->tcb_flags=htons(SYN+ACK | 5<<12))
+                      tcb->tcb_state=SYN_RECEIVED;
+              }
+          }
+
+      }
+
 
   }
   else

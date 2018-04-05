@@ -324,7 +324,7 @@ printf("Connecting to:\n");
 	dest.sin_port = htons(port);//htons(4100);//dest_port
 	printf("Port: %x ",dest.sin_port);
 
-	dest.sin_addr.s_addr=inet_addr("192.168.2.109");
+	dest.sin_addr.s_addr=inet_addr("192.168.2.116");
 	printf("IP: 0x%X\n",dest.sin_family);
 
 		connect_s(socket1,&dest,sizeof(dest));
@@ -348,6 +348,7 @@ printf("Time taken %d seconds %d milliseconds (%d iterations)\n",
   msec/1000, msec%1000, iterations);
 	if(tcb->tcb_state==SYN_SENT)
 		printf("Connection timeout\n");
-
+	if(tcb->tcb_state==SYN_RECEIVED)
+			printf("Stablishing..\n");
 
 }

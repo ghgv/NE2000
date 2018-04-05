@@ -11,9 +11,9 @@
 #define URG			0x20
 
 
-
-#define SYN_SENT 0x01
-#define TCP_CLOSED 0x00
+#define TCP_CLOSED    0x00
+#define SYN_SENT      0x01
+#define SYN_RECEIVED  0x02
 
 static const char *STATES[] = {
     "CLOSED", "SYN_SENT", "SYN_RECEIVED", "ESTABLISHED",
