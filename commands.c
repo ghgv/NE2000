@@ -260,6 +260,10 @@ int list_sockets(){
 			printf("Socket[%i]:\n Type: %i\n",i,fd[i].type);
 			printf(" Protocol: %i\n",fd[i].protocol);
 			printf(" Status: %s\n",STATES[tcb->tcb_state]);
+			printf(" Remote IP : 0x%08X\n",ntohl(tcb->tcb_rip.s_addr));
+			printf(" Source IP : 0x%08X\n",ntohl(tcb->tcb_lip.s_addr));
+			printf(" Local port: %i\n",ntohs(tcb->tcb_lport));
+			printf(" Remote port: %i\n",ntohs(tcb->tcb_rport));
 
 		 }
 
@@ -322,33 +326,14 @@ printf("Connecting to:\n");
 	dest.sin_family = AddFamily;
 	printf("Family: %i ",dest.sin_family);
 	dest.sin_port = htons(port);//htons(4100);//dest_port
-	printf("Port: %x ",dest.sin_port);
+	printf("Port: %i 0x%X ",htons(dest.sin_port),htons(dest.sin_port));
 
 	dest.sin_addr.s_addr=inet_addr("192.168.2.116");
-	printf("IP: 0x%X\n",dest.sin_family);
+	printf("Family: 0x%X\n",dest.sin_family);
 
 		connect_s(socket1,&dest,sizeof(dest));
 
 
-	int msec = 0, trigger = 500;
-	int iterations=0;/* 10ms */
-	clock_t before = clock();
-	do {
-  /*
-   * Do something to busy the CPU just here while you drink a coffee
-   * Be sure this code will not take more than `trigger` ms
-   */
 
-  clock_t difference = clock() - before;
-  msec = difference * 1000 / CLOCKS_PER_SEC;
-  iterations++;
-} while ( msec < trigger );
-
-printf("Time taken %d seconds %d milliseconds (%d iterations)\n",
-  msec/1000, msec%1000, iterations);
-	if(tcb->tcb_state==SYN_SENT)
-		printf("Connection timeout\n");
-	if(tcb->tcb_state==SYN_RECEIVED)
-			printf("Stablishing..\n");
 
 }

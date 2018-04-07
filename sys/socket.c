@@ -4,13 +4,22 @@
 #include "mbuf.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
+#include <stdlib.h>
 
 
 int socket_number=0; //socket_number
+static int trigger=0;
 
 int socket(int domain, int type, int protocol){
   int i;
   tcb_t *tcb;
+
+  if(trigger==0)
+  {
+    srand(time(NULL));
+    trigger++;
+  }
 
   if(domain!= AF_INET )
     return -1;
@@ -30,7 +39,10 @@ int socket(int domain, int type, int protocol){
           fd[i].sck=(tcb_t *)malloc(sizeof(tcb_t));
           fd[i].type=type;
           fd[i].protocol=protocol;
+          tcb=fd[i].sck;
           tcb->tcb_state=TCP_CLOSED;
+          tcb->tcb_lport=0xffff & htons(rand());
+          printf("Local port: 0x%X %i\n",0xffff & ntohs(tcb->tcb_lport), (unsigned short) ntohs(tcb->tcb_lport));
         }
 
         if(fd[i].sck==0)
@@ -71,10 +83,11 @@ int connect_s(int sockfd,  sockaddr_in_t *addr, int addrlen)
     tcb->tcb_state=SYN_SENT;
     tcb->tcb_flags= htons(SYN | 5<<12) ;
     tcb->tcb_lip.s_addr=inet_addr("192.168.2.11");
-    tcb->tcb_lport=htons(100);
+    //tcb->tcb_lport=htons(100);
     tcb->tcb_swindow=htonl(0x123);
     tcb->tcb_snext=12;
-    printf("connect_s lport: %i\n",ntohs(tcb->tcb_lport));
+    printf("Local port: %i 0x%X\n",(unsigned int ) ntohs(0xffff & tcb->tcb_lport),0xffff & ntohs(tcb->tcb_lport));
+    printf("Remote port: %i 0x%X\n",(unsigned int) ntohs(0xffff & tcb->tcb_rport),0xffff & ntohs(tcb->tcb_rport));
 
 
 
@@ -95,7 +108,7 @@ int connect_s(int sockfd,  sockaddr_in_t *addr, int addrlen)
     tcphead.dest_port   = tcb->tcb_rport;
     tcphead.seq_number  = htonl(tcb->tcb_snext);
     tcphead.ack_number  = htonl(tcb->tcb_suna);
-    tcphead.flags       = 0x0250;
+    tcphead.flags       = 0x0250;//tcb->tcb_flags=htons(SYN+ACK | 5<<12))
     tcphead.windows     =100;
     tcphead.checksum    =0;
     tcphead.urgent      = 0;
@@ -103,7 +116,7 @@ int connect_s(int sockfd,  sockaddr_in_t *addr, int addrlen)
     memcpy(pseudo,&tcphead,sizeof(tcpheader_t));
     tcphead.checksum=htons(tcp_sum(pseudo,sizeof(tcpheader_t),tcb->tcb_rip.s_addr,tcb->tcb_lip.s_addr));
 
-    free(pseudo);
+
 
     memcpy(paquete,&iph,sizeof(ipheader));
     memcpy(&paquete[sizeof(ipheader)],&tcphead,sizeof(tcpheader_t));
@@ -111,8 +124,56 @@ int connect_s(int sockfd,  sockaddr_in_t *addr, int addrlen)
 
     send_raw_packet(paquete,sizeof(tcpheader_t)+sizeof(ipheader),	0x0800);
 
+    int msec = 0, trigger = 500;
+  	int iterations=0;/* 10ms */
+  	clock_t before = clock();
+  	do {
+    /*
+     * wait while the answer from the peer happens
+     */
 
-    return 0;
+    clock_t difference = clock() - before;
+    msec = difference * 1000 / CLOCKS_PER_SEC;
+    iterations++;
+  } while ( msec < trigger );
+  //printf("Time taken %d seconds %d milliseconds (%d iterations)\n", msec/1000, msec%1000, iterations);
+  	if(tcb->tcb_state==SYN_SENT){
+      printf("Connection timeout\n");
+      return -1;
+    }
+  	if(tcb->tcb_state==SYN_RECEIVED)
+    {
+      	printf("Stablishing..\n");
+        tcphead.flags=htons(ACK | 5<<12);
+        tcphead.seq_number  = htonl(tcb->tcb_suna);
+        tcphead.ack_number  = htonl(++tcb->tcb_snext);
+        tcphead.checksum    =0;
+        memcpy(pseudo,&tcphead,sizeof(tcpheader_t));
+        tcphead.checksum=htons(tcp_sum(pseudo,sizeof(tcpheader_t),tcb->tcb_rip.s_addr,tcb->tcb_lip.s_addr));
+
+        memcpy(paquete,&iph,sizeof(ipheader));
+        memcpy(&paquete[sizeof(ipheader)],&tcphead,sizeof(tcpheader_t));
+        //memcpy(&paquete[sizeof(ipheader)+sizeof(tcphead)],addr,count);
+        if(send_raw_packet(paquete,sizeof(tcpheader_t)+sizeof(ipheader),	0x0800)==0){
+          tcb->tcb_state=ESTABLISHED;
+          printf("Stablished %i \n",tcb->tcb_state);
+          free(pseudo);
+          return 0;
+        }
+        else{
+          tcb->tcb_state=TCP_CLOSED;
+          printf("Not connected. Closing.\n");
+          free(pseudo);
+          return -11;
+        }
+
+
+    }
+
+    free(pseudo);
+
+
+    return -1;
 
   }
   return -1; //Error

@@ -57,17 +57,25 @@ int mbuf(raw_packet_t *pack){
       {
 
         atcpheader=(pack->data+14+20);
-        printf("\nTCP Source port: %i 0x%X ",ntohs(atcpheader->source_port),ntohs(atcpheader->source_port));
-        printf("\nTCP Dst port: %i 0x%X \n",ntohs(atcpheader->dest_port),ntohs(atcpheader->dest_port));
+        //printf("\nTCP Source port: %i 0x%X ",ntohs(atcpheader->source_port),ntohs(atcpheader->source_port));
+        //printf("\nTCP Dst port: %i 0x%X \n",ntohs(atcpheader->dest_port),ntohs(atcpheader->dest_port));
         for(i=1;i<MAX_FILE_DESCRIPTORS;i++)
           {
             tcb=fd[i].sck;
             if(tcb!=NULL)
               {
-                printf("Local IP: 0x%08X 0x%08X, Local port: 0x%X 0x%X\n",htonl(tcb->tcb_lip.s_addr),ntohl(aheader->ip_dst) ,htons(tcb->tcb_lport),ntohs(atcpheader->dest_port ));
-                if(tcb->tcb_lip.s_addr==aheader->ip_dst && tcb->tcb_lport==atcpheader->dest_port )
-                    if(tcb->tcb_flags=htons(SYN+ACK | 5<<12))
-                      tcb->tcb_state=SYN_RECEIVED;
+                //printf("\nLocal IP: 0x%08X 0x%08X, Local port: %i %i\n",htonl(tcb->tcb_lip.s_addr),ntohl(aheader->ip_dst) ,htons(tcb->tcb_lport),ntohs(atcpheader->dest_port ));
+                //printf("\nFlags: 0x%X 0x%X \n",0x0FFF & ntohs( atcpheader->flags),SYN+ACK);
+                if(tcb->tcb_lip.s_addr==aheader->ip_dst)
+                    if (htons(tcb->tcb_lport)==ntohs(atcpheader->dest_port ))
+                    if((0x0FFF & ntohs( atcpheader->flags))==SYN+ACK)
+                      {
+                        tcb->tcb_state=SYN_RECEIVED;
+                        tcb->tcb_suna=ntohl(atcpheader->ack_number);
+                        tcb->tcb_snext=ntohl(atcpheader->seq_number);
+                        //printf("tcb->tcb_state=SYN_RECEIVED\n");
+                      }
+
               }
           }
 

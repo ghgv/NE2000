@@ -103,7 +103,7 @@ int send_raw_packet(unsigned char *packet,int len,int proto)
          }
          i++;
       }
-      printf("\nWaiting for Interrupt in send_raw_packet after");
+      printf("\nWaiting for Interrupt in send_raw_packet after\n");
     //printf("\n");
 //  	printf("\nInterrup status: 0x%x, count %i %x %x\n",s, count,count & 0xff,count >>8);
   	outb(TRANSMITBUFFER,TRANSMITPAGE);
@@ -204,7 +204,7 @@ int nic_reset()
 	c = inb(COMMAND + NS_RESET);
 	outb(c,COMMAND + NS_RESET);
   outb(0xff,INTERRUPTSTATUS);
-  sleep(1);
+  //sleep(1);
   printf("Reset 0x%02x\n",c);
 
 
