@@ -10,6 +10,7 @@
 
 int socket_number=0; //socket_number
 static int trigger=0;
+extern int debugsocket;
 
 int socket(int domain, int type, int protocol){
   int i;
@@ -42,6 +43,7 @@ int socket(int domain, int type, int protocol){
           tcb=fd[i].sck;
           tcb->tcb_state=TCP_CLOSED;
           tcb->tcb_lport=0xffff & htons(rand());
+          if(debugsocket==1)
           printf("Local port: 0x%X %i\n",0xffff & ntohs(tcb->tcb_lport), (unsigned short) ntohs(tcb->tcb_lport));
         }
 
@@ -86,9 +88,10 @@ int connect_s(int sockfd,  sockaddr_in_t *addr, int addrlen)
     //tcb->tcb_lport=htons(100);
     tcb->tcb_swindow=htonl(0x123);
     tcb->tcb_snext=12;
+    if(debugsocket==1){
     printf("Local port: %i 0x%X\n",(unsigned int ) ntohs(0xffff & tcb->tcb_lport),0xffff & ntohs(tcb->tcb_lport));
     printf("Remote port: %i 0x%X\n",(unsigned int) ntohs(0xffff & tcb->tcb_rport),0xffff & ntohs(tcb->tcb_rport));
-
+    }
 
 
     iph.ip_v =  0x04;
@@ -156,7 +159,7 @@ int connect_s(int sockfd,  sockaddr_in_t *addr, int addrlen)
         //memcpy(&paquete[sizeof(ipheader)+sizeof(tcphead)],addr,count);
         if(send_raw_packet(paquete,sizeof(tcpheader_t)+sizeof(ipheader),	0x0800)==0){
           tcb->tcb_state=ESTABLISHED;
-          printf("Stablished %i \n",tcb->tcb_state);
+          printf("Stablished\n");
           free(pseudo);
           return 0;
         }

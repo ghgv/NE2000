@@ -7,6 +7,7 @@
 
 mbuf_t *buffer,*head,*curr;
 int y;
+extern int debugmbuf;
 
 int init_buf(){
 
@@ -14,6 +15,7 @@ int init_buf(){
    curr->m_nextpacket=0;
    curr->m_next=0;
    head=curr;
+   if(debugmbuf)
    printf("Init mbuffer:  HEAD= %x\n",head);
 
   return 0;
@@ -36,6 +38,8 @@ int mbuf(raw_packet_t *pack){
   length =pack->len;
 
   buffer=(mbuf_t *)malloc(128);
+
+  if(debugmbuf)
   printf("\n### mbuf prev: 0x%X next: 0x%X \n",pack->prev,pack->next);
   fflush(stdout);
 
@@ -46,6 +50,8 @@ int mbuf(raw_packet_t *pack){
     buffer->m_type=(int) 34;s=(unsigned char *) buffer;
     memcpy(s+48,pack->data,length);
     aheader=(pack->data+14);
+    if(debugmbuf)
+    {
     printf("\nIP ver: 0x%02X ",aheader->ip_v &0xf);
     printf("\nIP hl: 0x%02X ",aheader->ip_hl &0xf);
     printf("\nIP tos: 0x%X ",aheader->ip_tos);
@@ -53,6 +59,7 @@ int mbuf(raw_packet_t *pack){
     printf("\nIP protocol: 0x%02X ",aheader->ip_p);
     printf("\nIP Src: 0x%X ",ntohl(aheader->ip_src));
     printf("\nIP Dst: 0x%X ",ntohl(aheader->ip_dst));
+    }
     if(aheader->ip_p==0x6)
       {
 
@@ -117,19 +124,21 @@ int get_buff(int f, unsigned char *addr , int count){
 
       if((buffer->data[0x24]*0x100+buffer->data[0x25])==ntohs(tcb->tcb_rport))
           {
-            printf(" Source.[Remote] port: %i\n",buffer->data[34]*0x100+buffer->data[35]);
-            printf(" Dest.[local] port: %i\n",buffer->data[36]*0x100+buffer->data[37]);
-            printf(" Seq.[Remote]: %i\n",buffer->data[38]*0x10000+buffer->data[39]*0x1000+buffer->data[40]*0x100+buffer->data[41]);
-            printf(" Ack.[Remote]: %i\n",buffer->data[42]*0x10000+buffer->data[43]*0x1000+buffer->data[44]*0x100+buffer->data[45]);
-            printf(" Dataoffset: %x \n",buffer->data[46]>>4);
-            printf(" Flags: 0x%02X\n",(buffer->data[46]*0x100+buffer->data[47])&0x1FF);
-            printf(" Window Size: 0x%04X\n",(buffer->data[48]*0x100+buffer->data[49]));
-            printf(" Checksum: 0x%04X\n",(buffer->data[50]*0x100+buffer->data[51]));
-            printf(" Window Size: 0x%04X\n",(buffer->data[52]*0x100+buffer->data[53]));
-            printf(" Urgent Pointer: 0x%04X\n",(buffer->data[54]*0x100+buffer->data[55]));
-            printf("\n Buffer: 0x%X \n",buffer);
-            printf(" Buffer->m_next = 0x%X\n",buffer->m_next);
-            printf(" Buffer->m_len = %i \n",buffer->m_len);
+
+              printf(" Source.[Remote] port: %i\n",buffer->data[34]*0x100+buffer->data[35]);
+              printf(" Dest.[local] port: %i\n",buffer->data[36]*0x100+buffer->data[37]);
+              printf(" Seq.[Remote]: %i\n",buffer->data[38]*0x10000+buffer->data[39]*0x1000+buffer->data[40]*0x100+buffer->data[41]);
+              printf(" Ack.[Remote]: %i\n",buffer->data[42]*0x10000+buffer->data[43]*0x1000+buffer->data[44]*0x100+buffer->data[45]);
+              printf(" Dataoffset: %x \n",buffer->data[46]>>4);
+              printf(" Flags: 0x%02X\n",(buffer->data[46]*0x100+buffer->data[47])&0x1FF);
+              printf(" Window Size: 0x%04X\n",(buffer->data[48]*0x100+buffer->data[49]));
+              printf(" Checksum: 0x%04X\n",(buffer->data[50]*0x100+buffer->data[51]));
+              printf(" Window Size: 0x%04X\n",(buffer->data[52]*0x100+buffer->data[53]));
+              printf(" Urgent Pointer: 0x%04X\n",(buffer->data[54]*0x100+buffer->data[55]));
+              printf("\n Buffer: 0x%X \n",buffer);
+              printf(" Buffer->m_next = 0x%X\n",buffer->m_next);
+              printf(" Buffer->m_len = %i \n",buffer->m_len);
+
 
             tcb->fin=(buffer->data[46]*0x100+buffer->data[47])&0x1;
             tcb->syn=((buffer->data[46]*0x100+buffer->data[47])&0x2);
@@ -138,15 +147,17 @@ int get_buff(int f, unsigned char *addr , int count){
             tcb->ack=((buffer->data[46]*0x100+buffer->data[47])&0x10)>>4;
             tcb->urg=((buffer->data[46]*0x100+buffer->data[47])&0x20)>>5;
 
-            printf(" TCB FIN = %i \n",tcb->fin);
-            printf(" TCB SYN = %i \n",tcb->syn);
-            printf(" TCB RST = %i \n",tcb->rst);
-            printf(" TCB PSH = %i \n",tcb->psh);
-            printf(" TCB ACK = %i \n",tcb->ack);
-            printf(" TCB URG = %i \n",tcb->urg);
-            printf(" TCB state = %i \n",tcb->tcb_state);
-            printf(" TCB state = %i \n",tcb->tcb_state);
-            fflush(stdout);
+
+              printf(" TCB FIN = %i \n",tcb->fin);
+              printf(" TCB SYN = %i \n",tcb->syn);
+              printf(" TCB RST = %i \n",tcb->rst);
+              printf(" TCB PSH = %i \n",tcb->psh);
+              printf(" TCB ACK = %i \n",tcb->ack);
+              printf(" TCB URG = %i \n",tcb->urg);
+              printf(" TCB state = %i \n",tcb->tcb_state);
+              printf(" TCB state = %i \n",tcb->tcb_state);
+              fflush(stdout);
+
             prev=head;
             prev->m_next=buffer->m_next;
 
@@ -160,7 +171,7 @@ int get_buff(int f, unsigned char *addr , int count){
             return  len;
 
           }
-          printf(".");
+
     }
 
 return 0;

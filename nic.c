@@ -7,6 +7,8 @@
 
 const char *progress = "-\\|/";
 extern pthread_mutex_t lock;
+extern debugnic;
+
 
 int send_raw_packet(unsigned char *packet,int len,int proto)
 {
@@ -15,9 +17,9 @@ int send_raw_packet(unsigned char *packet,int len,int proto)
   pthread_mutex_lock(&lock);
 
   int count =100,i,s,conteo;
-  #ifdef DEBUG
+  if(debugnic==1)
   printf("\n########### Inside Send Raw Packet ########### \n");
-  #endif
+
 //  printf("\n########### Inside Send Raw Packet ########### \n");
 //  printf(" Packet length %i %i\n",len,sizeof(ethhdr_t));
 
@@ -26,22 +28,25 @@ int send_raw_packet(unsigned char *packet,int len,int proto)
 
   outb(0x00,TRANSMITCONFIGURATION);//ERROR, TX and RX
 
-  #ifdef DEBUG
+  if(debugnic==1)
   printf("\nWaiting for Tx to finish [-]\n");
   while(inb(COMMAND)==0x26)
   {
     if(i % 100 == 0)
        {
+         if(debugnic==1){
            printf("%c%c%c]",8,8,progress[(i/100) % 4]);
            fflush(stdout);
+         }
        }
        i++;
     }
-  #endif
 
 
+  if(debugnic==1)
   printf("\nCount: %i  ISR: %x\n",count,inb(INTERRUPTSTATUS));
   outb(0xff,INTERRUPTSTATUS); // Clear all interrupts
+  if(debugnic==1)
   printf("TRANSMITBUFFER: %02x  ISR: %x\n",TRANSMITBUFFER,inb(INTERRUPTSTATUS));
   if(count<60){
     outb(count & 0xFF,REMOTEBYTECOUNT0);
@@ -89,6 +94,7 @@ int send_raw_packet(unsigned char *packet,int len,int proto)
   }
   //for (i=0;i<(14+len);i++)
   //  printf("%i.0x%02X "S,i,*(ether_packet+i));
+    if(debugnic==1)
     printf("\nWaiting for Interrupt in send_raw_packet [-]");
     s=inb(INTERRUPTSTATUS);
     i=0;
@@ -103,6 +109,7 @@ int send_raw_packet(unsigned char *packet,int len,int proto)
          }
          i++;
       }
+      if(debugnic==1)
       printf("\nWaiting for Interrupt in send_raw_packet after\n");
     //printf("\n");
 //  	printf("\nInterrup status: 0x%x, count %i %x %x\n",s, count,count & 0xff,count >>8);
@@ -242,6 +249,7 @@ void readmem(dp8390_pkt_hdr *dest,unsigned short src ,int n){
 
 	outb(REG_PAGE0, COMMAND); //to read the BOUNDARY
   BNDY=inb(NE_P0_BOUNDARY);
+  if(debugnic==1)
   printf("BOUNDARY: 0x%X\n ",BNDY);
 	outb(BNDY,REMOTESTARTADDRESS1);
 	outb(0X00,REMOTESTARTADDRESS0);
@@ -249,8 +257,10 @@ void readmem(dp8390_pkt_hdr *dest,unsigned short src ,int n){
 	outb(0X00, REMOTEBYTECOUNT1);
 	outb(CMD_REMOTE_READ+CMD_START, COMMAND);
 	dest->ReceiveStatus=inb(IOPORT);
+  if(debugnic==1)
   printf("Status: 0x%X\n ",dest->ReceiveStatus);
 	next_pkt=inb(IOPORT);
+  if(debugnic==1)
   printf("Next Packet Pointer page: 0x%X \n ",next_pkt);
 	dest->NextPacketPointer=next_pkt;
 	pl0=inb(IOPORT);
@@ -265,11 +275,13 @@ void readmem(dp8390_pkt_hdr *dest,unsigned short src ,int n){
 	outb((pal>>8)&0xff, REMOTEBYTECOUNT1);
 	outb( CMD_REMOTE_READ+CMD_START, COMMAND);
 
+  if(debugnic==1)
   printf("LEN: 0x%X %i\n ",pal,pal);
   if(pal>1200)
     return;
 	for(i=0;i<pal;i++){
 		ether_packet[i]=inb(IOPORT);
+    if(debugnic==1)
 		printf("0x%02hhx ",ether_packet[i]);
 			}
 
@@ -297,6 +309,7 @@ void readmem(dp8390_pkt_hdr *dest,unsigned short src ,int n){
 		outb(PSTOP-1,BOUNDARY);
 
   outb(REG_PAGE1, COMMAND); //to read the CURR
+  if(debugnic==1)
   printf("\nNext PP 0x%02X ,  CURR= %02x \n",next_pkt,inb(COMMAND+NE_P1_CURR));
 
   outb(REG_PAGE0, COMMAND); //to read the CURR
@@ -318,10 +331,13 @@ int received_packet(){
   outb(REG_PAGE1, COMMAND);
 
   while(next_pkt !=inb(COMMAND+NE_P1_CURR)){
-		printf("Next Packet= %02x CURR=%02x\n",next_pkt,inb(COMMAND+NE_P1_CURR));
+    if(debugnic==1)
+  	printf("Next Packet= %02x CURR=%02x\n",next_pkt,inb(COMMAND+NE_P1_CURR));
   	packet_ptr= next_pkt*256;
 		readmem(&header,packet_ptr,sizeof(dp8390_pkt_hdr));
-    printf("pkt=0x%02X\n",++pkt);
+    ++pkt;
+    if(debugnic==1)
+    printf("pkt=0x%02X\n",pkt);
     outb(REG_PAGE1, COMMAND);
     if(pkt==15)
         while(1);
@@ -352,15 +368,18 @@ pthread_mutex_lock(&lock);
 
 	while((irq_value = inb(COMMAND + P0_ISR))!=0)
 		{
-			printf("IRQ event: %02x %02x\n",irq_value,irq_value & ISR_VL_PTX);
+      if(debugnic==1)
+      printf("IRQ event: %02x %02x\n",irq_value,irq_value & ISR_VL_PTX);
 			outb(irq_value,COMMAND + P0_ISR);
 
 			if(irq_value & ISR_VL_OVW){
+        if(debugnic==1)
 				printf("Overflow\n");
         //overflow();
         while(1);
 				}
 			if(irq_value & ISR_VL_PRX){
+        if(debugnic==1)
 				printf("######### Packet Received #########\n",k);
 				received_packet();
 				packet_selector();
@@ -368,11 +387,13 @@ pthread_mutex_lock(&lock);
 				}
 
 			if(irq_value & ISR_VL_PTX){
+        if(debugnic==1)
 				printf(" Packet Transmitted ##########\n");
         outb(REG_PAGE0, COMMAND);
 				}
 
 			if(irq_value & ISR_VL_RDC){
+        if(debugnic==1)
         printf("DMA completed\n");
         outb(0x40,COMMAND + P0_ISR);
         outb(REG_PAGE0, COMMAND);
@@ -396,44 +417,58 @@ int packet_selector()
 	raw_packet_t *pack,*prev,*post;
 	int s=0;
 
+  if(debugnic==1)
 	printf("\n######## Packet selector[%i]####_# 0x%X 0x%X\n",paquetes,root,root->next);
 	for(pack=root;pack!=NULL;pack=pack->next)
 		{
-			printf("%i. Curr: 0x%02X Prev: 0x%02X Next: 0x%02X\n",++j,pack,pack->prev,pack->next);
+      ++j;
+      if(debugnic==1)
+			printf("%i. Curr: 0x%02X Prev: 0x%02X Next: 0x%02X\n",j,pack,pack->prev,pack->next);
 		}
 	for(pack=root;pack!=NULL;pack=pack->next)
 		{
-			printf("\nPacket %i length: %i\n",++s,pack->len);
+      ++s;
+      if(debugnic==1)
+			printf("\nPacket %i length: %i\n",s,pack->len);
+      if(debugnic==1)
 			printf("Curr: 0x%02X Next: 0x%02X\n",pack,pack->next);
+      if(debugnic==1)
 			printf("Data:\n ");
 			prev=pack->prev;
       if (pack->len==0)
        continue;
 			 for(i=0;i<pack->len;i++)
-			   printf("0x%02X ",(unsigned char )(pack->data[i]));
+        {
+          if(debugnic==1)
+          printf("0x%02X ",(unsigned char )(pack->data[i]));
+        }
+
 
 			memcpy(&EthernetP,&pack->data[12],sizeof(unsigned short));
 
 
 	switch (ntohs(EthernetP)) {
 		case ETH_P_IP:
+            if(debugnic==1)
 						printf("\nIPv4 Packet:\n");
 						mbuf(pack);
+            if(debugnic==1)
 						printf("prev : 0x%X 0x%X\n",prev,pack->next);fflush(stdout);
 						prev->next=pack->next;
 						if(pack->next!=NULL)
 							{
 							post=pack->next;
 							post->prev=pack->prev;
-
 							}
 						free(pack->data);
 						free(pack);
 						//decode_ip(&ether_packet);
 						break;
 		case ETH_P_ARP:
+            if(debugnic==1)
 						printf("\n\n ARP Packet:\n");
 						decode_arp(pack);
+            if(debugnic==1)
 						printf("prev : 0x%X 0x%X\n",prev,pack->next);fflush(stdout);
 						prev->next=pack->next;
 						if(pack->next!=NULL)
@@ -446,7 +481,7 @@ int packet_selector()
 						break;
 	}
 }
-
+if(debugnic==1)
 printf("\n######## end of packet selector####_# %x %x %x\n",prev,prev->prev,prev->next);
 
 root->next=NULL;

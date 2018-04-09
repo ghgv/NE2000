@@ -5,9 +5,17 @@
 #include "testne2000.h"
 #include "sys/socket.h"
 
+
 pthread_t thread1;
 pthread_mutex_t lock;
 extern sockaddr_in_t dest;
+extern int debugtcp;
+extern int debugip ;
+extern int debugsocket;
+extern int debugmbuf;
+extern int debugnic;
+
+
 
 int  iret1;
 char command[30][40];
@@ -78,7 +86,11 @@ int decode_command(char *buff){
 		if(strcmp(&command[0],"close")==0)
 						close_socket(&command[1]);
 		if(strcmp(&command[0],"connect")==0)
-						connect_socket(&command[1],&command[2],&command[3]);
+						connect_socket(&command[1],&command[2],&command[3],&command[4]);
+		if(strcmp(&command[0],"interface")==0)
+						interface(&command[1],&command[2]);
+		if(strcmp(&command[0],"debug")==0)
+						debug(&command[1],&command[2]);
 }
 
 
@@ -92,7 +104,8 @@ if(strcmp(arg1,"?")==0)
  ISR				Interrupt Status Register\n\
  RSR				Receive Status Register\n\
  int0				Interface 0\n\
- socket				Sockets\n");
+ socket				Sockets\n\
+ int 				Configure interface up or down\n");
 		}
 if(strcmp(arg1,"regis")==0)
   {
@@ -232,6 +245,7 @@ void get_stats()
 void getreg(){
 	pthread_mutex_lock(&lock);
 	reg=inb(COMMAND) & 0xC0;
+
 }
 
 void putreg(){
@@ -328,10 +342,80 @@ printf("Connecting to:\n");
 	dest.sin_port = htons(port);//htons(4100);//dest_port
 	printf("Port: %i 0x%X ",htons(dest.sin_port),htons(dest.sin_port));
 
-	dest.sin_addr.s_addr=inet_addr("192.168.2.116");
+	dest.sin_addr.s_addr=inet_addr("192.168.2.102");
 	printf("Family: 0x%X\n",dest.sin_family);
 
 		connect_s(socket1,&dest,sizeof(dest));
+
+
+
+
+}
+
+int interface(unsigned char *nic,unsigned char *state )
+{
+	int num; //Interface 0 is NE2000, 1 is RTL3189
+
+	if(nic!=NULL){
+		num = (int)strtol(nic, NULL, 10);
+
+	}
+	else{
+		return 0;
+	}
+	if(strcmp(state,"up")==0)
+		{
+			printf("Interface %i is up\n",num);
+			outb( 0xE800 + 0x52, 0x0);
+			return 1;
+		}
+	if(strcmp(state,"down")==0)
+			{
+				printf("Interface %i is down\n",num);
+				return 1;
+			}
+return 0;
+}
+
+int debug(unsigned char *proto, unsigned char *state)
+{
+
+	if(strcmp(proto,"all")==0)
+		if(strcmp(state,"on")==0){
+			debugtcp=1;
+			debugip=1;
+			debugnic=1;
+			debugmbuf=1;
+		}
+		else
+		{
+			debugtcp=0;
+			debugip=0;
+			debugnic=0;
+			debugmbuf=0;
+		}
+
+
+
+if(strcmp(proto,"tcp")==0)
+	if(strcmp(state,"on")==0)
+		debugtcp=1;
+	else
+		debugtcp=0;
+
+
+
+if(strcmp(proto,"ip")==0)
+	if(strcmp(state,"on")==0)
+			debugip=1;
+	else
+			debugip=0;
+
+if(strcmp(proto,"nic")==0)
+	if(strcmp(state,"on")==0)
+		debugnic=1;
+	else
+   debugnic=0;
 
 
 

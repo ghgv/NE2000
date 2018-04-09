@@ -289,4 +289,7 @@ void readmem(dp8390_pkt_hdr *dest,unsigned short src ,int n);
 #define ntohs(A) ((((uint16)(A) & 0xff00) >> 8) | \
 (((uint16)(A) & 0x00ff) << 8))
 
+
+
+
 #endif

@@ -34,6 +34,14 @@
 extern pthread_mutex_t lock;
 sockaddr_in_t dest;
 
+int debugtcp =0;
+int debugip=0 ;
+int debugsocket=0;
+int debugmbuf=0;
+int debugnic=0;
+
+
+
 const char *progresso = "-\\|/";
 
 
@@ -261,7 +269,7 @@ static int ne_probe(struct ne *ne) {
 	IPHeader->ip_p=0x6;
 	IPHeader->ip_sum=0x0;
 	IPHeader->ip_src=inet_addr("192.168.2.11");  //htonl(0x2);
-	IPHeader->ip_dst=inet_addr("192.168.2.116");  //htonl(0x6);
+	IPHeader->ip_dst=inet_addr("192.168.2.102");  //htonl(0x6);
 	memcpy(&ether_packet[14],IPHeader,sizeof(ipheader));
 	unsigned char *l;
 	l=IPHeader;
@@ -363,7 +371,7 @@ int main(char argc, char **argv)
 
 	dest.sin_family = AF_INET;
 	dest.sin_port = htons(231);//htons(4100);//dest_port
-	dest.sin_addr.s_addr=inet_addr("192.168.2.116");
+	dest.sin_addr.s_addr=inet_addr("192.168.2.102");
 
 	NIC = (struct ne *) malloc(sizeof(struct ne));
 	nic_reset();
