@@ -341,8 +341,6 @@ static int ne_probe(struct ne *ne) {
 	return 1;
 }
 
-
-
 int main(char argc, char **argv)
 {
 	char e;
@@ -352,7 +350,6 @@ int main(char argc, char **argv)
 	unsigned char data[100],i=0;
 
   signal(SIGALRM, jiffies);
-  alarm(1);
 
   if (pthread_mutex_init(&lock, NULL) != 0)
   {

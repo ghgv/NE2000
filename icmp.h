@@ -24,7 +24,7 @@ typedef struct
 }__attribute__ ((packed)) icmp_reply_t;
 
 int decode_icmp(unsigned char *packet);
-int icmp_reply(unsigned char *packet);
+int icmp_reply(unsigned char *packet,unsigned long src_ip);
 int icmp_checksum();
 
 

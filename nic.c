@@ -339,8 +339,8 @@ int received_packet(){
     if(debugnic==1)
     printf("pkt=0x%02X\n",pkt);
     outb(REG_PAGE1, COMMAND);
-    if(pkt==15)
-        while(1);
+    //if(pkt==15)
+    //    while(1);
 		}
 
 	return paquetes;

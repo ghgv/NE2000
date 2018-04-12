@@ -60,7 +60,7 @@ int mbuf(raw_packet_t *pack){
     printf("\nIP Src: 0x%X ",ntohl(aheader->ip_src));
     printf("\nIP Dst: 0x%X ",ntohl(aheader->ip_dst));
     }
-    if(aheader->ip_p==0x6)
+    if(aheader->ip_p==0x6) //This is a TCP packet
       {
 
         atcpheader=(pack->data+14+20);
@@ -86,6 +86,10 @@ int mbuf(raw_packet_t *pack){
               }
           }
 
+      }
+      if(aheader->ip_p==0x01)
+      {
+        decode_icmp(*pack);
       }
 
 
@@ -200,8 +204,8 @@ int send_buff(int f, unsigned char *addr , int count){
             printf(" Remote IP Port: %i\n",ntohs(tcb->tcb_rport));
             printf(" Source IP: 0x%X\n",ntohl(tcb->tcb_lip.s_addr));
             printf(" Source IP Port: %i\n",ntohs(tcb->tcb_lport));
-            printf(" SEQ: %i count %i\n",tcb->tcb_snext,count);
-            printf(" SEQ2: %i \n",tcb->tcb_snext+count);
+            printf(" SEQ: %i 0x%X count %i\n",(unsigned int)tcb->tcb_snext,(unsigned int)tcb->tcb_snext,count);
+            printf(" ACK: %i 0x%X\n",(unsigned int) tcb->tcb_suna,(unsigned int) tcb->tcb_suna);
             tmp=tcb->tcb_snext+count;
             tcb->tcb_snext=tmp;
             tcphead.source_port = tcb->tcb_lport;

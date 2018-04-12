@@ -24,7 +24,7 @@ static const char *STATES[] = {
     unsigned long s_addr;  // load with inet_aton()
 } __attribute__ ((packed)) in_addr;
 */
-typedef int tcpseq;
+typedef unsigned int tcpseq;
 
 //http://www.cs.unc.edu/~dewan/242/s00/xinu-pentium/h/tcb.h
 typedef struct tcb {

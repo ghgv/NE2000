@@ -4,16 +4,19 @@
 #include "tcp.h"
 #include "testne2000.h"
 #include "sys/socket.h"
+#include "timer.h"
 
 
 pthread_t thread1;
 pthread_mutex_t lock;
 extern sockaddr_in_t dest;
+extern long click;
 extern int debugtcp;
 extern int debugip ;
 extern int debugsocket;
 extern int debugmbuf;
 extern int debugnic;
+extern int debugarp;
 
 
 
@@ -91,6 +94,10 @@ int decode_command(char *buff){
 						interface(&command[1],&command[2]);
 		if(strcmp(&command[0],"debug")==0)
 						debug(&command[1],&command[2]);
+		if(strcmp(&command[0],"write")==0)
+						write_socket(&command[1],&command[2]);
+	  if(strcmp(&command[0],"timer")==0)
+		   			set_timer(&command[1],&command[2]);
 }
 
 
@@ -105,6 +112,8 @@ if(strcmp(arg1,"?")==0)
  RSR				Receive Status Register\n\
  int0				Interface 0\n\
  socket				Sockets\n\
+ mac				MAC table\n\
+ timers				Set a timer in seconds\n\
  int 				Configure interface up or down\n");
 		}
 if(strcmp(arg1,"regis")==0)
@@ -162,6 +171,15 @@ if(strcmp(arg1,"socket")==0)
 						    {
 									list_sockets();
 						    }
+if(strcmp(arg1,"mac")==0)
+						    {
+								list_mac();
+						    }
+if(strcmp(arg1,"time")==0)
+					    {
+   						printf("Current clicks are: %i seconds.",click);
+						    }
+
 printf("\b\b\n");
 
 }
@@ -189,6 +207,7 @@ int set(char *reg, unsigned char *value){
 			putreg();
 			return 0;
   }
+
 printf("No register %s.\n",reg);
 return -1;
 }
@@ -278,6 +297,34 @@ int list_sockets(){
 			printf(" Source IP : 0x%08X\n",ntohl(tcb->tcb_lip.s_addr));
 			printf(" Local port: %i\n",ntohs(tcb->tcb_lport));
 			printf(" Remote port: %i\n",ntohs(tcb->tcb_rport));
+			printf(" Sequence : %i\n",ntohs(tcb->tcb_snext));
+			printf(" Acknowledge: %i\n",ntohs(tcb->tcb_suna));
+
+
+		 }
+
+	}
+
+}
+
+int list_mac(){
+	int i;
+	tcb_t *tcb;
+printf("MAC table not yet implemented\n");
+	for(i=1;i<MAX_FILE_DESCRIPTORS;i++)
+	 {
+		 if(fd[i].sck!=0){
+			tcb=fd[i].sck;
+			printf("Socket[%i]:\n Type: %i\n",i,fd[i].type);
+			printf(" Protocol: %i\n",fd[i].protocol);
+			printf(" Status: %s\n",STATES[tcb->tcb_state]);
+			printf(" Remote IP : 0x%08X\n",ntohl(tcb->tcb_rip.s_addr));
+			printf(" Source IP : 0x%08X\n",ntohl(tcb->tcb_lip.s_addr));
+			printf(" Local port: %i\n",ntohs(tcb->tcb_lport));
+			printf(" Remote port: %i\n",ntohs(tcb->tcb_rport));
+			printf(" Sequence : %i\n",ntohs(tcb->tcb_snext));
+			printf(" Acknowledge: %i\n",ntohs(tcb->tcb_suna));
+
 
 		 }
 
@@ -307,9 +354,7 @@ int connect_socket(char *sock,char *AF,char *Port,char *IP){
 	int port;
 	unsigned long IPadd;
 	tcb_t *tcb;
-
-printf("Connecting to:\n");
-
+	printf("Connecting to:\n");
 
 	if(sock!=NULL)
 		socket1 = (int)strtol(sock, NULL, 16);
@@ -318,9 +363,10 @@ printf("Connecting to:\n");
 			 printf("Wrong socket number.\n");
 			 return -1;
 		 }
+
 	if(fd[socket1].sck==0){
-		printf("Socket is closed.\n");
-		return -1;
+			printf("Socket is closed.\n");
+			return -1;
 	}
 	else
 	{
@@ -344,11 +390,7 @@ printf("Connecting to:\n");
 
 	dest.sin_addr.s_addr=inet_addr("192.168.2.102");
 	printf("Family: 0x%X\n",dest.sin_family);
-
-		connect_s(socket1,&dest,sizeof(dest));
-
-
-
+	connect_s(socket1,&dest,sizeof(dest));
 
 }
 
@@ -386,6 +428,7 @@ int debug(unsigned char *proto, unsigned char *state)
 			debugip=1;
 			debugnic=1;
 			debugmbuf=1;
+			printf("debug all is ON\n");
 		}
 		else
 		{
@@ -393,17 +436,14 @@ int debug(unsigned char *proto, unsigned char *state)
 			debugip=0;
 			debugnic=0;
 			debugmbuf=0;
+			printf("debug all is OFF\n");
 		}
-
-
 
 if(strcmp(proto,"tcp")==0)
 	if(strcmp(state,"on")==0)
 		debugtcp=1;
 	else
 		debugtcp=0;
-
-
 
 if(strcmp(proto,"ip")==0)
 	if(strcmp(state,"on")==0)
@@ -413,11 +453,55 @@ if(strcmp(proto,"ip")==0)
 
 if(strcmp(proto,"nic")==0)
 	if(strcmp(state,"on")==0)
+	{
 		debugnic=1;
+		printf("debug nic is ON\n");
+	}
 	else
    debugnic=0;
 
+if(strcmp(proto,"arp")==0)
+ 	if(strcmp(state,"on")==0)
+	 	{
+	 		debugarp=1;
+	 		printf("debug arp is ON\n");
+	 	}
+	 	else
+	    debugarp=0;
 
+
+}
+
+int write_socket(unsigned char *sock, unsigned char *data){
+	int num; //Interface 0 is NE2000, 1 is RTL3189
+
+	if(sock!=NULL){
+		num = (int)strtol(sock, NULL, 10);
+
+	}
+	else{
+		return 0;
+	}
+	write_s(num,data,strlen(data));
+}
+
+int aviso()
+{
+	printf("Time: %i\n",click);
+}
+
+int set_timer(unsigned char *time,unsigned char *action)
+{
+	int num; //Interface 0 is NE2000, 1 is RTL3189
+
+	if(time!=NULL){
+		num = (int)strtol(time, NULL, 10);
+
+	}
+	else{
+		return 0;
+	}
+  timer(num,&aviso);
 
 
 }
